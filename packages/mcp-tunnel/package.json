@@ -5,8 +5,10 @@
   "type": "module",
   "main": "dist/index.js",
   "scripts": {
-    "build": "tsc",
-    "lint": "eslint src"
+    "build": "tsc --project tsconfig.build.json",
+    "lint": "eslint src",
+    "test": "bun test",
+    "typecheck": "tsc"
   },
   "repository": {
     "type": "git",
@@ -25,6 +27,7 @@
   },
   "devDependencies": {
     "@modelcontextprotocol/sdk": "catalog:",
+    "@types/bun": "catalog:",
     "@types/node": "catalog:",
     "@types/ws": "^8.18.1",
     "eslint": "catalog:",
