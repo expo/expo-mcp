@@ -59,6 +59,93 @@ export function addMcpTools(server: McpServerProxy, projectRoot: string) {
     }
   );
 
+  server.registerTool(
+    'eas_workflow_create',
+    {
+      title: 'Create EAS workflow',
+      description: 'Create an EAS workflow YAML file in .eas/workflows/ for building, submitting, or updating your Expo app',
+      inputSchema: {
+        projectRoot: z.string(),
+        workflowName: z.string().describe('Name of the workflow file (without .yml extension)'),
+        platform: z.enum(['android', 'ios', 'both']).optional(),
+        jobType: z.enum(['build', 'submit', 'update']).optional(),
+      },
+    },
+    async ({ projectRoot, workflowName, platform, jobType }) => {
+      try {
+        const responses: { type: 'text'; text: string }[] = [];
+
+        await within(async () => {
+          $.cwd = projectRoot;
+          await $`mkdir -p .eas/workflows`;
+        });
+
+        const platformType = platform ?? 'both';
+        const type = jobType ?? 'build';
+
+        let workflowContent = `name: ${workflowName.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}\njobs:\n`;
+
+        if (platformType === 'both' || platformType === 'android') {
+          workflowContent += `  ${type}_android:\n    type: ${type}\n    params:\n      platform: android\n`;
+        }
+
+        if (platformType === 'both' || platformType === 'ios') {
+          workflowContent += `  ${type}_ios:\n    type: ${type}\n    params:\n      platform: ios\n`;
+        }
+
+        const workflowPath = `${projectRoot}/.eas/workflows/${workflowName}.yml`;
+        await fs.promises.writeFile(workflowPath, workflowContent);
+
+        responses.push({ type: 'text', text: `Created workflow at .eas/workflows/${workflowName}.yml` });
+        responses.push({ type: 'text', text: `Run with: npx eas-cli workflow:run ${workflowName}.yml` });
+
+        return { content: responses };
+      } catch (e: unknown) {
+        return {
+          content: [{ type: 'text', text: `Failed to create workflow: ${e}` }]
+        };
+      }
+    }
+  );
+
+  server.registerTool(
+    'eas_workflow_validate',
+    {
+      title: 'Validate EAS workflow',
+      description: 'Validate an EAS workflow YAML file before running it',
+      inputSchema: {
+        projectRoot: z.string(),
+        workflowFile: z.string().describe('Name of the workflow file (e.g., build-production.yml)'),
+      },
+    },
+    async ({ projectRoot, workflowFile }) => {
+      try {
+        const workflowPath = `${projectRoot}/.eas/workflows/${workflowFile}`;
+        const exists = await fs.promises.access(workflowPath).then(() => true).catch(() => false);
+
+        if (!exists) {
+          return {
+            content: [{ type: 'text', text: `Workflow file not found: .eas/workflows/${workflowFile}` }]
+          };
+        }
+
+        const content = await fs.promises.readFile(workflowPath, 'utf-8');
+
+        return {
+          content: [
+            { type: 'text', text: `Workflow file found: .eas/workflows/${workflowFile}` },
+            { type: 'text', text: `\nContent:\n${content}` },
+            { type: 'text', text: `\nTo run: npx eas-cli workflow:run ${workflowFile}` }
+          ]
+        };
+      } catch (e: unknown) {
+        return {
+          content: [{ type: 'text', text: `Failed to validate workflow: ${e}` }]
+        };
+      }
+    }
+  );
+
   //#region automation tools
 
   server.registerTool(
