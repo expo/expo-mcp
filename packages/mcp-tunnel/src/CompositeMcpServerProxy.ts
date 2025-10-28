@@ -11,10 +11,14 @@ export class CompositeMcpServerProxy implements McpServerProxy {
 
   constructor({
     tunnelServerUrl,
+    projectRoot,
+    devServerUrl,
     stdioMcpServerName,
     stdioMcpServerVersion,
   }: {
     tunnelServerUrl: string;
+    projectRoot: string;
+    devServerUrl: string;
     stdioMcpServerName?: string;
     stdioMcpServerVersion?: string;
   }) {
@@ -22,7 +26,10 @@ export class CompositeMcpServerProxy implements McpServerProxy {
       mcpServerName: stdioMcpServerName,
       mcpServerVersion: stdioMcpServerVersion,
     });
-    this.tunnelProxy = new TunnelMcpServerProxy(tunnelServerUrl);
+    this.tunnelProxy = new TunnelMcpServerProxy(tunnelServerUrl, {
+      projectRoot,
+      devServerUrl,
+    });
   }
 
   registerTool: McpServerProxy['registerTool'] = (name, config, callback) => {

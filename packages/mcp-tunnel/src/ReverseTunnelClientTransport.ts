@@ -5,11 +5,17 @@ import {
 import { type JSONRPCMessage } from '@modelcontextprotocol/sdk/types.js';
 import WebSocket from 'ws';
 
-import { JSON_RPC_VERSION } from './constants.js';
+import {
+  JSON_RPC_VERSION,
+  NON_RECONNECTABLE_CLOSE_CODES,
+  WS_METHOD_HANDSHAKE,
+} from './constants.js';
 import { type Logger } from './types.js';
 
 // Maximum message size supported by the server
 const MAX_MESSAGE_SIZE = 1024 * 1024 * 1; // 1MB
+
+const DEFAULT_RECONNECT_INTERVAL = 5000;
 
 /**
  * A MCP transport that connects to a WebSocket tunnel server and serves as a reverse proxy for the MCP server.
@@ -22,24 +28,37 @@ export class ReverseTunnelClientTransport implements Transport {
   private reconnectInterval: number;
   private reconnectTimer?: NodeJS.Timeout;
   private isConnected = false;
+  private isServerAborted = false;
+  private readonly handshakeData: {
+    projectRoot: string;
+    devServerUrl: string;
+  };
 
   onConnectionChange?: (connected: boolean) => void;
+  onServerAbort?: (reason: string, closeCode?: number) => void;
 
   constructor(
     remoteUrl: string,
     options: {
+      projectRoot: string;
+      devServerUrl: string;
       reconnectInterval?: number;
       wsHeaders?: Record<string, string>;
       logger?: Logger;
-    } = {}
+    }
   ) {
-    const { reconnectInterval = 5000 } = options;
+    const { reconnectInterval = DEFAULT_RECONNECT_INTERVAL } = options;
     this.logger = options.logger ?? console;
     this.wsHeaders = options.wsHeaders ?? {};
 
     // Ensure the URL points to the WebSocket tunnel endpoint
     this.remoteUrl = remoteUrl.endsWith('/tunnel') ? remoteUrl : `${remoteUrl}/tunnel`;
     this.reconnectInterval = reconnectInterval;
+
+    this.handshakeData = {
+      projectRoot: options.projectRoot,
+      devServerUrl: options.devServerUrl,
+    };
   }
 
   async start(): Promise<void> {
@@ -62,6 +81,8 @@ export class ReverseTunnelClientTransport implements Transport {
           this.reconnectTimer = undefined;
         }
 
+        this.sendHandshake();
+
         // Notify connection state change
         this.onConnectionChange?.(true);
       });
@@ -75,10 +96,24 @@ export class ReverseTunnelClientTransport implements Transport {
         }
       });
 
-      this.ws.on('close', () => {
-        this.logger.debug('[MCP] Disconnected from remote MCP tunnel server');
+      this.ws.on('close', (code: number, reason: Buffer) => {
+        this.logger.debug(
+          `[MCP] Disconnected from remote MCP tunnel server (code: ${code}, reason: ${reason.toString()})`
+        );
         this.isConnected = false;
         this.onConnectionChange?.(false);
+
+        // Check if this is a non-reconnectable error
+        if (NON_RECONNECTABLE_CLOSE_CODES.has(code)) {
+          this.isServerAborted = true;
+          const reasonStr = reason.toString() || 'Connection closed from server abort';
+          this.logger.error(
+            `[MCP] Server aborted connection (code: ${code}): ${reasonStr}. Will not reconnect.`
+          );
+          this.onServerAbort?.(reasonStr, code);
+          return;
+        }
+
         this.scheduleReconnect();
       });
 
@@ -86,7 +121,7 @@ export class ReverseTunnelClientTransport implements Transport {
         this.logger.error('[MCP] WebSocket error:', error);
         this.isConnected = false;
         this.onConnectionChange?.(false);
-        this.scheduleReconnect();
+        // Note: 'close' event will be emitted after 'error', which will handle reconnection
       });
 
       // Wait for connection to be established
@@ -113,6 +148,11 @@ export class ReverseTunnelClientTransport implements Transport {
   }
 
   private scheduleReconnect(): void {
+    if (this.isServerAborted) {
+      this.logger.debug('[MCP] Not scheduling reconnect due to permanent disconnection');
+      return;
+    }
+
     if (this.reconnectTimer) {
       return; // Already scheduled
     }
@@ -167,6 +207,24 @@ export class ReverseTunnelClientTransport implements Transport {
 
     this.isConnected = false;
     this.onConnectionChange?.(false);
+  }
+
+  private async sendHandshake(): Promise<void> {
+    if (!this.ws || !this.isConnected) {
+      this.logger.warn('[MCP] Cannot send handshake: not connected');
+      return;
+    }
+
+    try {
+      await this.send({
+        jsonrpc: JSON_RPC_VERSION,
+        method: WS_METHOD_HANDSHAKE,
+        params: this.handshakeData,
+      });
+      this.logger.debug('[MCP] Handshake sent', this.handshakeData);
+    } catch (error) {
+      this.logger.error('[MCP] Failed to send handshake:', error);
+    }
   }
 
   onMessage?: (message: JSONRPCMessage) => void;

@@ -33,10 +33,12 @@ export class TunnelMcpServerProxy implements McpServerProxy {
   constructor(
     remoteUrl: string,
     options: {
+      projectRoot: string;
+      devServerUrl: string;
       reconnectInterval?: number;
       wsHeaders?: Record<string, string>;
       logger?: Logger;
-    } = {}
+    }
   ) {
     this.logger = options.logger ?? console;
     this.transport = new ReverseTunnelClientTransport(remoteUrl, options);
@@ -47,6 +49,10 @@ export class TunnelMcpServerProxy implements McpServerProxy {
       if (connected) {
         this.refreshAllRegistrations();
       }
+    };
+
+    this.transport.onServerAbort = (reason: string, closeCode?: number) => {
+      // no-op by default
     };
 
     // Set up message handler to route incoming requests to registered callbacks
