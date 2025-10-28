@@ -6,7 +6,7 @@
     },
     "packages/expo-mcp": {
       "name": "expo-mcp",
-      "version": "0.1.14",
+      "version": "0.1.15",
       "bin": {
         "expo-mcp": "bin/expo-mcp.mjs",
       },
