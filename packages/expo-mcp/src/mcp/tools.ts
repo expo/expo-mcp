@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { $, tmpfile, within } from 'zx';
 
 import { AutomationFactory } from '../automation/AutomationFactory.js';
+import { createLogCollector } from '../develop/LogCollectorFactory.js';
 import { findDevServerUrlAsync, openDevtoolsAsync } from '../develop/devtools.js';
 import { resizeImageToMaxSizeAsync } from '../imageUtils.js';
 import { isExpoRouterProject } from '../project.js';
@@ -56,6 +57,56 @@ export function addMcpTools(server: McpServerProxy, projectRoot: string) {
       } catch (e: unknown) {
         return { content: [{ type: 'text', text: `Failed to open devtools: ${e}` }] };
       }
+    }
+  );
+
+  server.registerTool(
+    'collect_app_logs',
+    {
+      title: 'Collect logs from the app',
+      description: 'Use this tool to collect logs from the app. This is useful to debug the app.',
+      inputSchema: {
+        projectRoot: z.string(),
+        platform: z
+          .enum(['android', 'ios'])
+          .optional()
+          .describe(
+            'The platform to collect logs from. If not provided, the tool will guess the platform.'
+          ),
+        appId: z
+          .string()
+          .optional()
+          .describe(
+            'The app ID to collect logs from. If not provided, the tool will guess the app ID.'
+          ),
+        durationMs: z
+          .number()
+          .min(0)
+          .max(10000)
+          .optional()
+          .describe('The duration to collect logs in milliseconds.')
+          .default(2000),
+      },
+    },
+    async ({ projectRoot, platform: platformParam, appId: appIdParam, durationMs }) => {
+      const platform = platformParam ?? (await AutomationFactory.guessCurrentPlatformAsync());
+      const deviceId = await AutomationFactory.getBootedDeviceIdAsync(platform);
+      const appId =
+        appIdParam ?? (await AutomationFactory.getAppIdAsync({ projectRoot, platform, deviceId }));
+      const devServerUrl = server.devServerUrl;
+
+      const logCollector = createLogCollector({
+        android: platform === 'android' ? { appId, durationMs } : undefined,
+        iosSimulator: platform === 'ios' ? { bundleIdentifier: appId, durationMs } : undefined,
+        cdp: devServerUrl ? { metroUrl: devServerUrl, durationMs } : undefined,
+      });
+      const logs = await logCollector.collectAsync();
+      return {
+        content: [
+          { type: 'text', text: logs },
+          { type: 'text', text: `appid: ${appId}` },
+        ],
+      };
     }
   );
 

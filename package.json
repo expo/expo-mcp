@@ -2,21 +2,29 @@
   "name": "expo-mcp-monorepo",
   "private": true,
   "workspaces": {
-    "packages": ["packages/*"],
+    "packages": [
+      "packages/*"
+    ],
     "catalog": {
       "@modelcontextprotocol/sdk": "^1.17.5",
       "@types/bun": "^1.2.21",
       "@types/node": "^22.18.0",
-      "eslint": "^9.34.0",
-      "eslint-config-universe": "^15.0.3",
+      "@types/ws": "^8.18.1",
+      "memfs": "^4.50.0",
       "prettier": "^3.6.2",
       "typescript": "^5.9.2",
+      "ws": "^8.18.3",
       "zod": "^3.25.76"
     }
   },
+  "devDependencies": {
+    "eslint": "^9.34.0",
+    "eslint-config-universe": "^15.0.3"
+  },
   "scripts": {
-    "build": "bun run --filter \"@expo/mcp-tunnel\" --filter \"expo-mcp\" build",
-    "lint": "bun run --filter \"@expo/mcp-tunnel\" --filter \"expo-mcp\" lint",
-    "prepare": "bun run build"
+    "build": "bun run --filter ./packages/mcp-tunnel build && bun run --filter ./packages/expo-mcp build",
+    "lint": "bun run --filter '*' lint",
+    "test": "bun run --filter '*' test",
+    "prepublishOnly": "bun run build"
   }
 }

@@ -8,7 +8,7 @@
     "build": "tsc --project tsconfig.build.json",
     "lint": "eslint src",
     "test": "bun test",
-    "typecheck": "tsc"
+    "typecheck": "tsc --noEmit"
   },
   "repository": {
     "type": "git",
@@ -21,7 +21,7 @@
   "author": "650 Industries, Inc.",
   "license": "MIT",
   "dependencies": {
-    "ws": "^8.18.3",
+    "ws": "catalog:",
     "zod-to-json-schema": "^3.24.6",
     "zod": "catalog:"
   },
@@ -29,9 +29,7 @@
     "@modelcontextprotocol/sdk": "catalog:",
     "@types/bun": "catalog:",
     "@types/node": "catalog:",
-    "@types/ws": "^8.18.1",
-    "eslint": "catalog:",
-    "eslint-config-universe": "catalog:",
+    "@types/ws": "catalog:",
     "prettier": "catalog:",
     "typescript": "catalog:"
   },

@@ -8,10 +8,11 @@
     "expo-mcp": "bin/expo-mcp.mjs"
   },
   "scripts": {
-    "build": "tsc",
+    "build": "tsc --project tsconfig.build.json",
     "inspect": "bunx @modelcontextprotocol/inspector",
     "lint": "eslint src",
-    "prepare": "bun run build"
+    "test": "bun test",
+    "typecheck": "tsc --noEmit"
   },
   "repository": {
     "type": "git",
@@ -33,18 +34,23 @@
   "dependencies": {
     "@expo/mcp-tunnel": "workspace:~",
     "@modelcontextprotocol/sdk": "catalog:",
+    "debug": "^4.4.3",
     "glob": "^11.0.3",
     "jimp-compact": "0.16.1",
     "resolve-from": "^5.0.0",
+    "ws": "catalog:",
     "xml2js": "^0.6.2",
     "zod": "catalog:",
     "zx": "^8.8.1"
   },
   "devDependencies": {
+    "@types/bun": "catalog:",
+    "@types/debug": "^4.1.12",
     "@types/node": "catalog:",
+    "@types/ws": "catalog:",
     "@types/xml2js": "^0.4.14",
-    "eslint": "catalog:",
-    "eslint-config-universe": "catalog:",
+    "devtools-protocol": "^0.0.1537100",
+    "memfs": "catalog:",
     "prettier": "catalog:",
     "typescript": "catalog:"
   }

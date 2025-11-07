@@ -6,6 +6,7 @@ import { McpServerProxy } from './types.js';
  * A MCP server proxy that serves MCP capabilities for both `StdioMcpServerProxy` and `TunnelMcpServerProxy`.
  */
 export class CompositeMcpServerProxy implements McpServerProxy {
+  private readonly _devServerUrl: string;
   private readonly stdioProxy: StdioMcpServerProxy;
   private readonly tunnelProxy: TunnelMcpServerProxy;
 
@@ -22,7 +23,9 @@ export class CompositeMcpServerProxy implements McpServerProxy {
     stdioMcpServerName?: string;
     stdioMcpServerVersion?: string;
   }) {
+    this._devServerUrl = devServerUrl;
     this.stdioProxy = new StdioMcpServerProxy({
+      devServerUrl,
       mcpServerName: stdioMcpServerName,
       mcpServerVersion: stdioMcpServerVersion,
     });
@@ -58,5 +61,9 @@ export class CompositeMcpServerProxy implements McpServerProxy {
 
   async close(): Promise<void> {
     await Promise.all([this.stdioProxy.close(), this.tunnelProxy.close()]);
+  }
+
+  get devServerUrl(): string {
+    return this._devServerUrl;
   }
 }

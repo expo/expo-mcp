@@ -75,6 +75,11 @@ export interface McpServerProxy {
    * Closes the MCP server proxy.
    */
   close(): Promise<void>;
+
+  /**
+   * Gets the URL of the dev server.
+   */
+  get devServerUrl(): string;
 }
 
 export type SerializedSchema = object;
