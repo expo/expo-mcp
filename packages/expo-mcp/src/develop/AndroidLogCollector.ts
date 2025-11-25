@@ -66,7 +66,7 @@ export class AndroidLogCollector implements LogCollector {
         throw new Error(`Failed to clear adb logcat buffer: ${message}`);
       }
     }
-    const pid = await this.resolveAppPidAsync(adbPath, appId);
+    const pid = await resolveAppPidFromAdbAsync(adbPath, appId);
 
     const child = $({
       stdio: ['ignore', 'pipe', 'pipe'],
@@ -110,59 +110,63 @@ export class AndroidLogCollector implements LogCollector {
     return logs;
   }
 
-  private async resolveAppPidAsync(adbPath: string, appId: string): Promise<number> {
-    let psOutput: string;
-    try {
-      const { stdout } = await $`${adbPath} shell ps`.nothrow();
-      psOutput = stdout;
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
-      throw new Error(`Failed to list processes via adb shell ps: ${message}`);
-    }
-
-    const lines = psOutput
-      .split(/\r?\n/)
-      .map((line) => line.trim())
-      .filter(Boolean);
-    if (lines.length === 0) {
-      throw new Error('adb shell ps returned no process data.');
-    }
-
-    const [headerLine, ...processLines] = lines;
-    const headerColumns = headerLine.split(/\s+/);
-    const pidIndex = headerColumns.indexOf('PID');
-    const nameIndex = headerColumns.indexOf('NAME');
-    const commandIndex =
-      nameIndex !== -1
-        ? nameIndex
-        : headerColumns.findIndex((column) => column === 'CMD' || column === 'COMMAND');
-
-    for (const line of processLines) {
-      const parts = line.split(/\s+/);
-      const processName =
-        commandIndex !== -1 && commandIndex < parts.length
-          ? parts[commandIndex]
-          : parts[parts.length - 1];
-      if (processName !== appId) {
-        continue;
-      }
-      const pidToken =
-        pidIndex !== -1 && pidIndex < parts.length ? parts[pidIndex] : (parts[1] ?? parts[0]);
-      const pid = Number.parseInt(pidToken, 10);
-      if (Number.isNaN(pid)) {
-        continue;
-      }
-      return pid;
-    }
-
-    throw new Error(`No running process found for package "${appId}".`);
-  }
-
   private transformLogRecord(record: LogRecord): string {
     const level = record.level ? `[${record.level.toLowerCase()}]` : '[debug]';
     const payload = record.message;
     return [level, payload].join(' ');
   }
+}
+
+export function parseAppPidFromAdbPs(psOutput: string, appId: string): number {
+  const lines = psOutput
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+  if (lines.length === 0) {
+    throw new Error('adb shell ps returned no process data.');
+  }
+
+  const [headerLine, ...processLines] = lines;
+  const headerColumns = headerLine.split(/\s+/);
+  const pidIndex = headerColumns.indexOf('PID');
+  const nameIndex = headerColumns.indexOf('NAME');
+  const commandIndex =
+    nameIndex !== -1
+      ? nameIndex
+      : headerColumns.findIndex((column) => column === 'CMD' || column === 'COMMAND');
+
+  for (const line of processLines) {
+    const parts = line.split(/\s+/);
+    const processName =
+      commandIndex !== -1 && commandIndex < parts.length
+        ? parts[commandIndex]
+        : parts[parts.length - 1];
+    if (processName !== appId) {
+      continue;
+    }
+    const pidToken =
+      pidIndex !== -1 && pidIndex < parts.length ? parts[pidIndex] : (parts[1] ?? parts[0]);
+    const pid = Number.parseInt(pidToken, 10);
+    if (Number.isNaN(pid)) {
+      continue;
+    }
+    return pid;
+  }
+
+  throw new Error(`No running process found for package "${appId}".`);
+}
+
+export async function resolveAppPidFromAdbAsync(adbPath: string, appId: string): Promise<number> {
+  let psOutput: string;
+  try {
+    const { stdout } = await $`${adbPath} shell ps`.nothrow();
+    psOutput = stdout;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    throw new Error(`Failed to list processes via adb shell ps: ${message}`);
+  }
+
+  return parseAppPidFromAdbPs(psOutput, appId);
 }
 
 const ANDROID_LOG_LEVEL_MAP: Record<string, string> = {
