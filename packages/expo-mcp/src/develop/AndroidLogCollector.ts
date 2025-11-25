@@ -1,10 +1,10 @@
 import assert from 'node:assert';
 import os from 'node:os';
 import path from 'node:path';
-import { createInterface } from 'node:readline';
 import { $ } from 'zx';
 
 import { type LogCollector, type LogCollectorOptions, type LogRecord } from './LogCollector.js';
+import { streamProcessOutput } from './processUtils.js';
 import { fileExistsAsync } from '../utils.js';
 
 export interface AndroidLogCollectorOptions extends LogCollectorOptions {
@@ -71,141 +71,43 @@ export class AndroidLogCollector implements LogCollector {
     const child = $({
       stdio: ['ignore', 'pipe', 'pipe'],
     })`${adbPath} logcat --pid=${pid} ${additionalArgs}`.quiet();
-    const stdout = child.stdout;
-    const stderr = child.stderr;
 
-    if (!stdout || !stderr) {
-      child.kill('SIGTERM');
-      throw new Error('Failed to capture adb logcat output streams.');
-    }
-    // Prevent ProcessPromise rejection when we deliberately terminate logcat.
-    child.catch(() => undefined);
     const logs: LogRecord[] = [];
 
-    return new Promise<LogRecord[]>((resolve, reject) => {
-      let settled = false;
-      let stopRequested = false;
-      let killHandle: NodeJS.Timeout | undefined;
-      let timeoutHandle: NodeJS.Timeout | undefined;
-      const readers: ReturnType<typeof createInterface>[] = [];
-
-      const enqueueLogLine = (line: string, type: 'stdout' | 'stderr') => {
-        if (!line) {
-          return;
-        }
-        const parsed = parseAndroidLogcatLine(line);
-        const level =
-          parsed?.level ?? (type === 'stderr' ? 'error' : ANDROID_LOG_LEVEL_DEFAULT_STDOUT);
-        const metadata = parsed
-          ? {
-              pid: parsed.pid,
-              tid: parsed.tid,
-              tag: parsed.tag,
-              timestampLabel: parsed.timestampLabel,
-            }
-          : undefined;
-        logs.push({
-          source: this.name,
-          timestamp: parsed?.timestamp ?? Date.now(),
-          level,
-          message: parsed?.message ?? line,
-          raw: line,
-          type,
-          metadata,
-        });
-      };
-
-      const settleSuccess = () => {
-        if (settled) {
-          return;
-        }
-        settled = true;
-        cleanup();
-        resolve(logs);
-      };
-
-      const settleError = (error: Error) => {
-        if (settled) {
-          return;
-        }
-        settled = true;
-        cleanup();
-        reject(error);
-      };
-
-      const cleanup = () => {
-        for (const reader of readers) {
-          reader.close();
-        }
-        if (timeoutHandle) {
-          clearTimeout(timeoutHandle);
-        }
-        if (killHandle) {
-          clearTimeout(killHandle);
-        }
-      };
-
-      const forwardLines = async (
-        stream: NodeJS.ReadableStream,
-        onLine: (line: string) => void,
-        type: 'stdout' | 'stderr'
-      ) => {
-        const reader = createInterface({ input: stream, crlfDelay: Infinity });
-        readers.push(reader);
-        try {
-          for await (const line of reader) {
-            if (settled) {
-              break;
-            }
-            onLine(line);
-          }
-        } catch (error) {
-          if (!settled) {
-            const message = error instanceof Error ? error.message : 'Unknown stream read error';
-            settleError(
-              new Error(`Failed to read ${type} output from adb logcat for ${appId}: ${message}`)
-            );
-          }
-        } finally {
-          reader.close();
-        }
-      };
-
-      forwardLines(stdout, (line) => enqueueLogLine(line, 'stdout'), 'stdout');
-      forwardLines(stderr, (line) => enqueueLogLine(line, 'stderr'), 'stderr');
-
-      const childProcess = child.child;
-      if (!childProcess) {
-        settleError(new Error('Failed to acquire adb logcat child process handle.'));
+    const enqueueLogLine = (line: string, type: 'stdout' | 'stderr') => {
+      if (!line) {
         return;
       }
-
-      childProcess.once('error', (error: Error) => {
-        settleError(new Error(`Failed to start adb logcat: ${error.message}`));
+      const parsed = parseAndroidLogcatLine(line);
+      const level =
+        parsed?.level ?? (type === 'stderr' ? 'error' : ANDROID_LOG_LEVEL_DEFAULT_STDOUT);
+      const metadata = parsed
+        ? {
+            pid: parsed.pid,
+            tid: parsed.tid,
+            tag: parsed.tag,
+            timestampLabel: parsed.timestampLabel,
+          }
+        : undefined;
+      logs.push({
+        source: this.name,
+        timestamp: parsed?.timestamp ?? Date.now(),
+        level,
+        message: parsed?.message ?? line,
+        raw: line,
+        type,
+        metadata,
       });
+    };
 
-      childProcess.once('close', (code: number | null, signal: NodeJS.Signals | null) => {
-        if (!stopRequested && code !== 0 && signal === null) {
-          return settleError(
-            new Error(
-              `adb logcat exited with code ${code ?? 'unknown'} before the collection window elapsed.`
-            )
-          );
-        }
-        settleSuccess();
-      });
-
-      killHandle = setTimeout(() => {
-        child.kill('SIGKILL');
-      }, durationMs + 1000);
-      killHandle?.unref?.();
-
-      timeoutHandle = setTimeout(() => {
-        stopRequested = true;
-        child.kill('SIGINT');
-      }, durationMs);
-      timeoutHandle?.unref?.();
+    await streamProcessOutput(child, {
+      durationMs,
+      onStdoutLine: (line) => enqueueLogLine(line, 'stdout'),
+      onStderrLine: (line) => enqueueLogLine(line, 'stderr'),
+      processName: 'adb logcat',
     });
+
+    return logs;
   }
 
   private async resolveAppPidAsync(adbPath: string, appId: string): Promise<number> {

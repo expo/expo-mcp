@@ -1,7 +1,7 @@
-import { createInterface } from 'node:readline';
 import { $ } from 'zx';
 
 import { type LogCollector, type LogCollectorOptions, type LogRecord } from './LogCollector.js';
+import { streamProcessOutput } from './processUtils.js';
 
 interface SimulatorAppInfo {
   CFBundleExecutable?: string;
@@ -93,175 +93,74 @@ export class IosSimulatorLogCollector implements LogCollector {
     ];
 
     const child = $({ stdio: ['ignore', 'pipe', 'pipe'] })`${xcrunPath} ${args}`.quiet();
-    const stdout = child.stdout;
-    const stderr = child.stderr;
-
-    if (!stdout || !stderr) {
-      child.kill('SIGTERM');
-      throw new Error('Failed to capture iOS simulator log output streams.');
-    }
-    // Prevent ProcessPromise rejection when we stop the stream ourselves.
-    child.catch(() => undefined);
 
     const logs: LogRecord[] = [];
     const sharedMetadata = { bundleIdentifier, executable: executableName };
 
-    return new Promise<LogRecord[]>((resolve, reject) => {
-      let settled = false;
-      let stopRequested = false;
-      let killHandle: NodeJS.Timeout | undefined;
-      let timeoutHandle: NodeJS.Timeout | undefined;
-
-      const readers: ReturnType<typeof createInterface>[] = [];
-
-      const handleStdoutLine = (line: string) => {
-        if (!line) {
-          return;
-        }
-        const parsed = parseIosSimulatorLogLine(line);
-        const level = parsed?.level ? parsed.level.toLowerCase() : 'debug';
-        const metadata: LogMetadata = {
-          ...sharedMetadata,
-          timestamp: parsed?.timestampIso,
-          thread: parsed?.thread,
-          activity: parsed?.activity,
-          pid: parsed?.pid,
-          ttl: parsed?.ttl,
-          process: parsed?.process,
-          category: parsed?.category,
-          subsystem: parsed?.subsystem,
-        };
-        logs.push({
-          source: this.name,
-          timestamp: parsed?.timestamp ?? Date.now(),
-          level,
-          message: parsed?.text ?? line,
-          raw: line,
-          type: 'stdout',
-          metadata,
-        });
-      };
-
-      const handleStderrLine = (line: string) => {
-        if (!line) {
-          return;
-        }
-        const parsed = parseIosSimulatorLogLine(line);
-        const level = parsed?.level ? parsed.level.toLowerCase() : 'error';
-        const metadata: LogMetadata = {
-          ...sharedMetadata,
-          timestamp: parsed?.timestampIso,
-          thread: parsed?.thread,
-          activity: parsed?.activity,
-          pid: parsed?.pid,
-          ttl: parsed?.ttl,
-          process: parsed?.process,
-          category: parsed?.category,
-          subsystem: parsed?.subsystem,
-        };
-        logs.push({
-          source: this.name,
-          timestamp: parsed?.timestamp ?? Date.now(),
-          level,
-          message: parsed?.text ?? line,
-          raw: line,
-          type: 'stderr',
-          metadata,
-        });
-      };
-
-      const cleanup = () => {
-        for (const reader of readers) {
-          reader.close();
-        }
-        if (timeoutHandle) {
-          clearTimeout(timeoutHandle);
-        }
-        if (killHandle) {
-          clearTimeout(killHandle);
-        }
-      };
-
-      const forwardLines = async (
-        stream: NodeJS.ReadableStream,
-        onLine: (line: string) => void,
-        type: 'stdout' | 'stderr'
-      ) => {
-        const reader = createInterface({ input: stream, crlfDelay: Infinity });
-        readers.push(reader);
-        try {
-          for await (const line of reader) {
-            if (settled) {
-              break;
-            }
-            onLine(line);
-          }
-        } catch (error) {
-          if (!settled) {
-            const message = error instanceof Error ? error.message : 'Unknown stream read error';
-            settleError(
-              new Error(
-                `Failed to read ${type} output from the iOS simulator log stream: ${message}`
-              )
-            );
-          }
-        } finally {
-          reader.close();
-        }
-      };
-
-      const settleSuccess = () => {
-        if (settled) {
-          return;
-        }
-        settled = true;
-        cleanup();
-        resolve(logs);
-      };
-
-      const settleError = (error: Error) => {
-        if (settled) {
-          return;
-        }
-        settled = true;
-        cleanup();
-        reject(error);
-      };
-
-      forwardLines(stdout, handleStdoutLine, 'stdout');
-      forwardLines(stderr, handleStderrLine, 'stderr');
-
-      const childProcess = child.child;
-      if (!childProcess) {
-        settleError(new Error('Failed to acquire iOS simulator log stream handle.'));
-      } else {
-        childProcess.once('error', (error: Error) => {
-          settleError(new Error(`Failed to start iOS simulator log stream: ${error.message}`));
-        });
-
-        childProcess.once('close', (code: number | null, signal: NodeJS.Signals | null) => {
-          if (!stopRequested && code !== 0 && signal === null) {
-            return settleError(
-              new Error(
-                `iOS simulator log stream exited with code ${code ?? 'unknown'} before the collection window elapsed.`
-              )
-            );
-          }
-          settleSuccess();
-        });
+    const handleStdoutLine = (line: string) => {
+      if (!line) {
+        return;
       }
+      const parsed = parseIosSimulatorLogLine(line);
+      const level = parsed?.level ? parsed.level.toLowerCase() : 'debug';
+      const metadata: LogMetadata = {
+        ...sharedMetadata,
+        timestamp: parsed?.timestampIso,
+        thread: parsed?.thread,
+        activity: parsed?.activity,
+        pid: parsed?.pid,
+        ttl: parsed?.ttl,
+        process: parsed?.process,
+        category: parsed?.category,
+        subsystem: parsed?.subsystem,
+      };
+      logs.push({
+        source: this.name,
+        timestamp: parsed?.timestamp ?? Date.now(),
+        level,
+        message: parsed?.text ?? line,
+        raw: line,
+        type: 'stdout',
+        metadata,
+      });
+    };
 
-      killHandle = setTimeout(() => {
-        child.kill('SIGKILL');
-      }, durationMs + 1000);
-      killHandle?.unref?.();
+    const handleStderrLine = (line: string) => {
+      if (!line) {
+        return;
+      }
+      const parsed = parseIosSimulatorLogLine(line);
+      const level = parsed?.level ? parsed.level.toLowerCase() : 'error';
+      const metadata: LogMetadata = {
+        ...sharedMetadata,
+        timestamp: parsed?.timestampIso,
+        thread: parsed?.thread,
+        activity: parsed?.activity,
+        pid: parsed?.pid,
+        ttl: parsed?.ttl,
+        process: parsed?.process,
+        category: parsed?.category,
+        subsystem: parsed?.subsystem,
+      };
+      logs.push({
+        source: this.name,
+        timestamp: parsed?.timestamp ?? Date.now(),
+        level,
+        message: parsed?.text ?? line,
+        raw: line,
+        type: 'stderr',
+        metadata,
+      });
+    };
 
-      timeoutHandle = setTimeout(() => {
-        stopRequested = true;
-        child.kill('SIGINT');
-      }, durationMs);
-      timeoutHandle?.unref?.();
+    await streamProcessOutput(child, {
+      durationMs,
+      onStdoutLine: handleStdoutLine,
+      onStderrLine: handleStderrLine,
+      processName: 'iOS simulator log stream',
     });
+
+    return logs;
   }
   private async resolveExecutableNameAsync(
     xcrunPath: string,
