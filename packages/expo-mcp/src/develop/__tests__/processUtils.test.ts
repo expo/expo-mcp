@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, mock } from 'bun:test';
+import type { ChildProcess } from 'node:child_process';
 import { EventEmitter } from 'node:events';
 import { Readable } from 'node:stream';
-import type { ChildProcess } from 'node:child_process';
 import type { ProcessPromise } from 'zx';
 
 import { streamProcessOutput } from '../processUtils.js';
@@ -264,9 +264,7 @@ describe('streamProcessOutput', () => {
     stdout.push(null);
     stderr.push(null);
 
-    await expect(promise).rejects.toThrow(
-      'Failed to acquire test process child process handle.'
-    );
+    await expect(promise).rejects.toThrow('Failed to acquire test process child process handle.');
   });
 
   it('should handle empty lines correctly', async () => {
@@ -352,7 +350,7 @@ describe('streamProcessOutput', () => {
   });
 
   it('should terminate process when abort signal is triggered', async () => {
-    const { processPromise, stdout, stderr } = createMockProcessPromise();
+    const { processPromise, stdout } = createMockProcessPromise();
     const abortController = new AbortController();
     const stdoutLines: string[] = [];
 
@@ -454,7 +452,7 @@ describe('streamProcessOutput', () => {
   });
 
   it('should handle abort during stream reading', async () => {
-    const { processPromise, stdout, stderr } = createMockProcessPromise();
+    const { processPromise, stdout } = createMockProcessPromise();
     const abortController = new AbortController();
     const stdoutLines: string[] = [];
 
