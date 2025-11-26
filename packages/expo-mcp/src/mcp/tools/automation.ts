@@ -105,9 +105,9 @@ export function addAutomationTools(server: McpServerProxy, projectRoot: string) 
   server.registerTool(
     'automation_find_view',
     {
-      title: 'Find view properties by react-native testID',
+      title: 'Find view properties',
       description:
-        'Find view and dump its properties by react-native testID. This is useful to verify the view is rendered correctly',
+        'Find view and dump its properties. This is useful to verify the view is rendered correctly',
       inputSchema: {
         projectRoot: z.string(),
         platform: z.enum(['android', 'ios']).optional(),
