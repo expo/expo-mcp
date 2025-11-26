@@ -1,12 +1,13 @@
 import { describe, expect, it, mock, spyOn } from 'bun:test';
-import { ReverseTunnelClientTransport } from '../ReverseTunnelClientTransport';
+
+import { ReverseTunnelClientTransport } from '../ReverseTunnelClientTransport.js';
 import {
   JSON_RPC_VERSION,
-  WS_METHOD_HANDSHAKE,
   WSTunnelCloseCode,
   WSTunnelCloseMessage,
-} from '../constants';
-import { MockWebSocket } from './MockWebSocket';
+  WS_METHOD_HANDSHAKE,
+} from '../constants.js';
+import { MockWebSocket } from './MockWebSocket.js';
 
 mock.module('ws', () => ({
   default: MockWebSocket,

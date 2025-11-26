@@ -15,6 +15,7 @@ export default defineConfig([
           ignoreMemberSort: false,
         },
       ],
+      'import/extensions': ['error', 'ignorePackages'],
     },
   },
 ]);

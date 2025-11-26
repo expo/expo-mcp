@@ -11,16 +11,20 @@ import { type McpServerProxy } from './types.js';
  * A MCP server proxy that serves MCP capabilities as the stdio server transport.
  */
 export class StdioMcpServerProxy implements McpServerProxy {
+  private readonly _devServerUrl: string;
   private readonly server;
   private readonly transport = new StdioServerTransport();
 
   constructor({
+    devServerUrl,
     mcpServerName = 'Expo MCP Server',
     mcpServerVersion = '1.0.0',
   }: {
+    devServerUrl: string;
     mcpServerName?: string;
     mcpServerVersion?: string;
   }) {
+    this._devServerUrl = devServerUrl;
     this.server = new McpServer({
       name: mcpServerName,
       version: mcpServerVersion,
@@ -64,5 +68,9 @@ export class StdioMcpServerProxy implements McpServerProxy {
 
   close(): Promise<void> {
     return this.server.close();
+  }
+
+  get devServerUrl(): string {
+    return this._devServerUrl;
   }
 }

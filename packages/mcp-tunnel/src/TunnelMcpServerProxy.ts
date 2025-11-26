@@ -24,6 +24,7 @@ import {
  */
 export class TunnelMcpServerProxy implements McpServerProxy {
   private readonly logger: Logger;
+  private readonly _devServerUrl: string;
   private transport: ReverseTunnelClientTransport;
   private registeredTools = new Map<string, SerializedMcpTool & { callback: any }>();
   private registeredPrompts = new Map<string, SerializedMcpPrompt & { callback: any }>();
@@ -41,6 +42,7 @@ export class TunnelMcpServerProxy implements McpServerProxy {
     }
   ) {
     this.logger = options.logger ?? console;
+    this._devServerUrl = options.devServerUrl;
     this.transport = new ReverseTunnelClientTransport(remoteUrl, options);
 
     // Listen for connection events to refresh registrations
@@ -67,6 +69,10 @@ export class TunnelMcpServerProxy implements McpServerProxy {
 
   async close(): Promise<void> {
     await this.transport.close();
+  }
+
+  get devServerUrl(): string {
+    return this._devServerUrl;
   }
 
   registerTool: McpServerProxy['registerTool'] = (name, config, callback) => {
