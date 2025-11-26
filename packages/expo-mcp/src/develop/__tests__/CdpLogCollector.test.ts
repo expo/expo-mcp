@@ -18,7 +18,10 @@ describe('CdpLogCollector transformLogRecord', () => {
     };
 
     const result = (collector as any).transformLogRecord(record);
-    expect(result).toBe('[log] Hello {"foo":"bar"}');
+    expect(result).toEqual({
+      ...record,
+      data: '[log] Hello {"foo":"bar"}',
+    });
   });
 
   it('should filter known noisy log entries', () => {

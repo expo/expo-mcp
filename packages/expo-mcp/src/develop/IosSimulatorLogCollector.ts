@@ -1,6 +1,12 @@
 import { $ } from 'zx';
 
-import { type LogCollector, type LogCollectorOptions, type LogRecord } from './LogCollector.js';
+import {
+  type LogCollector,
+  type LogCollectorOptions,
+  type LogRecord,
+  type TransformedLogRecord,
+  shouldIncludeRecord,
+} from './LogCollector.js';
 import { streamProcessOutput } from './processUtils.js';
 
 interface SimulatorAppInfo {
@@ -64,12 +70,25 @@ export class IosSimulatorLogCollector implements LogCollector {
 
   async collectAsync(): Promise<string> {
     const records = await this.collectRawRecordsAsync();
-    return (
-      records.map((record) => this.transformLogRecord(record)).filter(Boolean) as string[]
-    ).join('\n');
+    return records.map((record) => record.data).join('\n');
   }
 
-  async collectRawRecordsAsync(): Promise<LogRecord[]> {
+  async collectRawRecordsAsync(): Promise<TransformedLogRecord[]> {
+    const records = await this.collectRawRecordsImplAsync();
+    return records
+      .map((record) => this.transformLogRecord(record))
+      .filter(
+        (record) =>
+          record != null &&
+          shouldIncludeRecord({
+            record,
+            logLevel: this.options.logLevel,
+            filterRegex: this.options.filterRegexp,
+          })
+      ) as TransformedLogRecord[];
+  }
+
+  async collectRawRecordsImplAsync(): Promise<LogRecord[]> {
     const {
       bundleIdentifier,
       durationMs = 5000,
@@ -162,6 +181,7 @@ export class IosSimulatorLogCollector implements LogCollector {
 
     return logs;
   }
+
   private async resolveExecutableNameAsync(
     xcrunPath: string,
     bundleIdentifier: string
@@ -216,7 +236,7 @@ export class IosSimulatorLogCollector implements LogCollector {
     }
   }
 
-  private transformLogRecord(record: LogRecord): string | null {
+  private transformLogRecord(record: LogRecord): TransformedLogRecord | null {
     const level = record.level ? `[${record.level.toLowerCase()}]` : '[debug]';
     const subsystem = record.metadata?.subsystem ?? '';
     const category = record.metadata?.category ?? '';
@@ -224,7 +244,10 @@ export class IosSimulatorLogCollector implements LogCollector {
     if (SKIP_MESSAGES.some((skipMessage) => payload?.includes(skipMessage))) {
       return null;
     }
-    return [level, subsystem, category, payload].filter(Boolean).join(' ');
+    return {
+      ...record,
+      data: [level, subsystem, category, payload].filter(Boolean).join(' '),
+    };
   }
 }
 

@@ -4,6 +4,16 @@ export interface LogCollectorOptions {
    * Defaults to 5000ms when not provided by the individual collector.
    */
   durationMs?: number;
+
+  /**
+   * Optional RegExp pattern to filter logs by message content.
+   */
+  filterRegexp?: RegExp;
+
+  /**
+   * Optional log level filter. Only logs matching this level will be returned.
+   */
+  logLevel?: string;
 }
 
 export interface LogRecord {
@@ -48,6 +58,13 @@ export interface LogRecord {
   type?: string;
 }
 
+export interface TransformedLogRecord extends LogRecord {
+  /**
+   * Primary transformed log data in `[level] message` format.
+   */
+  data: string;
+}
+
 export interface LogCollector {
   /**
    * Friendly name for the collector, used in diagnostics.
@@ -60,12 +77,35 @@ export interface LogCollector {
   get metadata(): Record<string, unknown>;
 
   /**
-   * Collects logs and resolves with the formatted records.
+   * Collects logs and resolves with stringified logs.
    */
   collectAsync(): Promise<string>;
 
   /**
    * Collects logs and resolves with the raw records.
    */
-  collectRawRecordsAsync(): Promise<LogRecord[]>;
+  collectRawRecordsAsync(): Promise<TransformedLogRecord[]>;
+}
+
+/**
+ * Determines if a log record should be included based on the log level and filter regex.
+ */
+export function shouldIncludeRecord({
+  record,
+  logLevel,
+  filterRegex,
+}: {
+  record: TransformedLogRecord;
+  logLevel?: string;
+  filterRegex?: RegExp;
+}): boolean {
+  if (logLevel && record.level && record.level !== logLevel) {
+    return false;
+  }
+
+  if (filterRegex) {
+    return filterRegex.test(record.data);
+  }
+
+  return true;
 }

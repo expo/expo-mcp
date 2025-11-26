@@ -74,9 +74,21 @@ export function addMcpTools(server: McpServerProxy, projectRoot: string) {
           .describe('Log sources: logcat, syslog, or console.log'),
         appId: z.string().optional(),
         durationMs: z.number().min(0).max(10000).default(2000),
+        filter: z
+          .string()
+          .optional()
+          .describe(
+            'Regex or string pattern to filter logs. Only logs matching this pattern will be returned'
+          ),
+        logLevel: z
+          .string()
+          .optional()
+          .describe(
+            'Log level filter (e.g., error, warn, info, debug). Only logs with this level will be returned'
+          ),
       },
     },
-    async ({ projectRoot, sources, appId: appIdParam, durationMs }) => {
+    async ({ projectRoot, sources, appId: appIdParam, durationMs, filter, logLevel }) => {
       const collectAndroid = sources.includes('native_android');
       const collectIos = sources.includes('native_ios');
       const collectJsConsole = sources.includes('js_console');
@@ -109,13 +121,20 @@ export function addMcpTools(server: McpServerProxy, projectRoot: string) {
       }
 
       const devServerUrl = server.devServerUrl;
+      let filterRegexp: RegExp | undefined = undefined;
+      if (filter) {
+        filterRegexp = typeof filter === 'string' ? new RegExp(filter) : filter;
+      }
 
       const logCollector = createLogCollector({
         android: collectAndroid && androidAppId ? { appId: androidAppId, durationMs } : undefined,
         iosSimulator:
           collectIos && iosAppId ? { bundleIdentifier: iosAppId, durationMs } : undefined,
         cdp: collectJsConsole && devServerUrl ? { metroUrl: devServerUrl, durationMs } : undefined,
+        filterRegexp,
+        logLevel,
       });
+
       const logs = await logCollector.collectAsync();
       return {
         content: [{ type: 'text', text: logs }],

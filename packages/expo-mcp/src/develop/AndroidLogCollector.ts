@@ -3,7 +3,13 @@ import os from 'node:os';
 import path from 'node:path';
 import { $ } from 'zx';
 
-import { type LogCollector, type LogCollectorOptions, type LogRecord } from './LogCollector.js';
+import {
+  type LogCollector,
+  type LogCollectorOptions,
+  type LogRecord,
+  type TransformedLogRecord,
+  shouldIncludeRecord,
+} from './LogCollector.js';
 import { streamProcessOutput } from './processUtils.js';
 import { fileExistsAsync } from '../utils.js';
 
@@ -47,10 +53,10 @@ export class AndroidLogCollector implements LogCollector {
 
   async collectAsync(): Promise<string> {
     const records = await this.collectRawRecordsAsync();
-    return records.map((record) => this.transformLogRecord(record)).join('\n');
+    return records.map((record) => record.data).join('\n');
   }
 
-  async collectRawRecordsAsync(): Promise<LogRecord[]> {
+  async collectRawRecordsAsync(): Promise<TransformedLogRecord[]> {
     if (!this.adbPath) {
       this.adbPath = this.options.adbPath ?? (await resolveAdbPathAsync());
     }
@@ -107,13 +113,25 @@ export class AndroidLogCollector implements LogCollector {
       processName: 'adb logcat',
     });
 
-    return logs;
+    return logs
+      .map((record) => this.transformLogRecord(record))
+      .filter((record) =>
+        shouldIncludeRecord({
+          record,
+          logLevel: this.options.logLevel,
+          filterRegex: this.options.filterRegexp,
+        })
+      );
   }
 
-  private transformLogRecord(record: LogRecord): string {
+  private transformLogRecord(record: LogRecord): TransformedLogRecord {
     const level = record.level ? `[${record.level.toLowerCase()}]` : '[debug]';
     const payload = record.message;
-    return [level, payload].join(' ');
+    const data = [level, payload].join(' ');
+    return {
+      ...record,
+      data,
+    };
   }
 }
 

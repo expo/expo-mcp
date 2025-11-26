@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test';
 
-import type { LogCollector, LogRecord } from '../LogCollector.js';
+import type { LogCollector, TransformedLogRecord } from '../LogCollector.js';
 
 const createCollector = (): LogCollector => ({
   name: 'test-collector',
@@ -10,10 +10,22 @@ const createCollector = (): LogCollector => ({
   async collectAsync(): Promise<string> {
     return 'first\nsecond';
   },
-  async collectRawRecordsAsync(): Promise<LogRecord[]> {
+  async collectRawRecordsAsync(): Promise<TransformedLogRecord[]> {
     return [
-      { source: 'test-collector', timestamp: 1, level: 'info', message: 'first' },
-      { source: 'test-collector', timestamp: 2, level: 'info', message: 'second' },
+      {
+        source: 'test-collector',
+        timestamp: 1,
+        level: 'info',
+        message: 'first',
+        data: '[info] first',
+      },
+      {
+        source: 'test-collector',
+        timestamp: 2,
+        level: 'info',
+        message: 'second',
+        data: '[info] second',
+      },
     ];
   },
 });
@@ -29,8 +41,20 @@ describe('LogCollector contract', () => {
     const collector = createCollector();
     const records = await collector.collectRawRecordsAsync();
     expect(records).toEqual([
-      { source: 'test-collector', timestamp: 1, level: 'info', message: 'first' },
-      { source: 'test-collector', timestamp: 2, level: 'info', message: 'second' },
+      {
+        source: 'test-collector',
+        timestamp: 1,
+        level: 'info',
+        message: 'first',
+        data: '[info] first',
+      },
+      {
+        source: 'test-collector',
+        timestamp: 2,
+        level: 'info',
+        message: 'second',
+        data: '[info] second',
+      },
     ]);
   });
 });

@@ -3,7 +3,13 @@ import type CdpMessageType from 'devtools-protocol';
 import { type WebSocket } from 'ws';
 
 import { CdpClient, type CdpClientOptions } from './CdpClient.js';
-import { type LogCollector, type LogCollectorOptions, type LogRecord } from './LogCollector.js';
+import {
+  type LogCollector,
+  type LogCollectorOptions,
+  type LogRecord,
+  type TransformedLogRecord,
+  shouldIncludeRecord,
+} from './LogCollector.js';
 
 const debug = createDebug('expo-mcp:develop:CdpLogCollector');
 
@@ -16,6 +22,11 @@ interface CdpMessage {
 }
 
 export interface CdpLogRecord extends LogRecord {
+  source: 'cdp';
+  type: 'console' | 'log';
+}
+
+export interface TransformedCdpLogRecord extends TransformedLogRecord {
   source: 'cdp';
   type: 'console' | 'log';
 }
@@ -50,12 +61,25 @@ export class CdpLogCollector implements LogCollector {
 
   async collectAsync(): Promise<string> {
     const records = await this.collectRawRecordsAsync();
-    return (
-      records.map((record) => this.transformLogRecord(record)).filter(Boolean) as string[]
-    ).join('\n');
+    return records.map((record) => record.data).join('\n');
   }
 
-  async collectRawRecordsAsync(): Promise<CdpLogRecord[]> {
+  async collectRawRecordsAsync(): Promise<TransformedCdpLogRecord[]> {
+    const records = await this.collectRawRecordsImplAsync();
+    return records
+      .map((record) => this.transformLogRecord(record))
+      .filter(
+        (record) =>
+          record != null &&
+          shouldIncludeRecord({
+            record,
+            logLevel: this.config.logLevel,
+            filterRegex: this.config.filterRegexp,
+          })
+      ) as TransformedCdpLogRecord[];
+  }
+
+  private async collectRawRecordsImplAsync(): Promise<CdpLogRecord[]> {
     const { metroUrl, targetSelector, durationMs = 5000, timeoutMs = 2000 } = this.config;
 
     let ws: WebSocket;
@@ -192,7 +216,7 @@ export class CdpLogCollector implements LogCollector {
     });
   }
 
-  private transformLogRecord(record: LogRecord): string | null {
+  private transformLogRecord(record: CdpLogRecord): TransformedCdpLogRecord | null {
     const level = record.level ? `[${record.level.toLowerCase()}]` : '[debug]';
     let payload: string | undefined;
     if (record.type === 'console') {
@@ -220,7 +244,10 @@ export class CdpLogCollector implements LogCollector {
       return null;
     }
 
-    return [level, payload ?? ''].join(' ');
+    return {
+      ...record,
+      data: [level, payload ?? ''].join(' '),
+    };
   }
 }
 

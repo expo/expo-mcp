@@ -19,6 +19,22 @@ describe(createLogCollector, () => {
     });
     expect(collector).toBeInstanceOf(CompositeLogCollector);
   });
+
+  it('should return a concrete collector with filter when only one config is provided', () => {
+    const collector = createLogCollector({
+      android: { appId: 'com.example.app' },
+      filterRegexp: /error/,
+    });
+    expect(collector).toBeInstanceOf(AndroidLogCollector);
+  });
+
+  it('should return a concrete collector with logLevel when only one config is provided', () => {
+    const collector = createLogCollector({
+      android: { appId: 'com.example.app' },
+      logLevel: 'error',
+    });
+    expect(collector).toBeInstanceOf(AndroidLogCollector);
+  });
 });
 
 describe(CompositeLogCollector, () => {
@@ -34,13 +50,22 @@ describe(CompositeLogCollector, () => {
       };
     },
     collectAsync: async () => messages.join('\n'),
-    collectRawRecordsAsync: async () => records,
+    collectRawRecordsAsync: async () =>
+      records.map((record) => ({ ...record, data: `[${record.level}] ${record.message}` })),
   });
 
   it('should merge results from underlying collectors', async () => {
     const collector = new CompositeLogCollector([
-      createStubCollector('one', ['alpha'], [{ source: 'one', timestamp: 1 }]),
-      createStubCollector('two', ['beta'], [{ source: 'two', timestamp: 2 }]),
+      createStubCollector(
+        'one',
+        ['alpha'],
+        [{ source: 'one', timestamp: 1, level: 'info', message: 'alpha' }]
+      ),
+      createStubCollector(
+        'two',
+        ['beta'],
+        [{ source: 'two', timestamp: 2, level: 'info', message: 'beta' }]
+      ),
     ]);
 
     const message = await collector.collectAsync();
@@ -57,8 +82,8 @@ beta`);
 
     const records = await collector.collectRawRecordsAsync();
     expect(records).toEqual([
-      { source: 'one', timestamp: 1 },
-      { source: 'two', timestamp: 2 },
+      { source: 'one', timestamp: 1, level: 'info', message: 'alpha', data: '[info] alpha' },
+      { source: 'two', timestamp: 2, level: 'info', message: 'beta', data: '[info] beta' },
     ]);
   });
 });
