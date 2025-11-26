@@ -63,49 +63,62 @@ export function addMcpTools(server: McpServerProxy, projectRoot: string) {
   server.registerTool(
     'collect_app_logs',
     {
-      title: 'Collect logs from the app',
-      description: 'Use this tool to collect logs from the app. This is useful to debug the app.',
+      title: 'Collect app logs',
+      description: 'Collect logs from native device (logcat/syslog) or JavaScript console',
       inputSchema: {
         projectRoot: z.string(),
-        platform: z
-          .enum(['android', 'ios'])
-          .optional()
-          .describe(
-            'The platform to collect logs from. If not provided, the tool will guess the platform.'
-          ),
-        appId: z
-          .string()
-          .optional()
-          .describe(
-            'The app ID to collect logs from. If not provided, the tool will guess the app ID.'
-          ),
-        durationMs: z
-          .number()
-          .min(0)
-          .max(10000)
-          .optional()
-          .describe('The duration to collect logs in milliseconds.')
-          .default(2000),
+        sources: z
+          .array(z.enum(['native_android', 'native_ios', 'js_console']))
+          .min(1)
+          .default(['js_console'])
+          .describe('Log sources: logcat, syslog, or console.log'),
+        appId: z.string().optional(),
+        durationMs: z.number().min(0).max(10000).default(2000),
       },
     },
-    async ({ projectRoot, platform: platformParam, appId: appIdParam, durationMs }) => {
-      const platform = platformParam ?? (await AutomationFactory.guessCurrentPlatformAsync());
-      const deviceId = await AutomationFactory.getBootedDeviceIdAsync(platform);
-      const appId =
-        appIdParam ?? (await AutomationFactory.getAppIdAsync({ projectRoot, platform, deviceId }));
+    async ({ projectRoot, sources, appId: appIdParam, durationMs }) => {
+      const collectAndroid = sources.includes('native_android');
+      const collectIos = sources.includes('native_ios');
+      const collectJsConsole = sources.includes('js_console');
+
+      let androidDeviceId: string | undefined;
+      let androidAppId: string | undefined;
+      let iosDeviceId: string | undefined;
+      let iosAppId: string | undefined;
+
+      if (collectAndroid) {
+        androidDeviceId = await AutomationFactory.getBootedDeviceIdAsync('android');
+        androidAppId =
+          appIdParam ??
+          (await AutomationFactory.getAppIdAsync({
+            projectRoot,
+            platform: 'android',
+            deviceId: androidDeviceId,
+          }));
+      }
+
+      if (collectIos) {
+        iosDeviceId = await AutomationFactory.getBootedDeviceIdAsync('ios');
+        iosAppId =
+          appIdParam ??
+          (await AutomationFactory.getAppIdAsync({
+            projectRoot,
+            platform: 'ios',
+            deviceId: iosDeviceId,
+          }));
+      }
+
       const devServerUrl = server.devServerUrl;
 
       const logCollector = createLogCollector({
-        android: platform === 'android' ? { appId, durationMs } : undefined,
-        iosSimulator: platform === 'ios' ? { bundleIdentifier: appId, durationMs } : undefined,
-        cdp: devServerUrl ? { metroUrl: devServerUrl, durationMs } : undefined,
+        android: collectAndroid && androidAppId ? { appId: androidAppId, durationMs } : undefined,
+        iosSimulator:
+          collectIos && iosAppId ? { bundleIdentifier: iosAppId, durationMs } : undefined,
+        cdp: collectJsConsole && devServerUrl ? { metroUrl: devServerUrl, durationMs } : undefined,
       });
       const logs = await logCollector.collectAsync();
       return {
-        content: [
-          { type: 'text', text: logs },
-          { type: 'text', text: `appid: ${appId}` },
-        ],
+        content: [{ type: 'text', text: logs }],
       };
     }
   );
