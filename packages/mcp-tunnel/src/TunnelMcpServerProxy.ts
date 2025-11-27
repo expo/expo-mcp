@@ -72,7 +72,10 @@ export class TunnelMcpServerProxy implements McpServerProxy {
   }
 
   get devServerUrl(): string {
-    return this._devServerUrl;
+    // To support backward compatibility that mcp-tunnel@~0.1.0 does not pass the devServerUrl to the constructor.
+    // We try to get the devServerUrl from the transport.
+    // TODO(kudo,20251127): Remove this once mcp-tunnel@~0.1.0 is no longer supported.
+    return this._devServerUrl ?? this.transport.devServerUrl;
   }
 
   registerTool: McpServerProxy['registerTool'] = (name, config, callback) => {
