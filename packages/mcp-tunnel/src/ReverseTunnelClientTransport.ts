@@ -65,6 +65,10 @@ export class ReverseTunnelClientTransport implements Transport {
     await this.connect();
   }
 
+  get devServerUrl(): string {
+    return this.handshakeData.devServerUrl;
+  }
+
   private async connect(): Promise<void> {
     try {
       this.logger.debug(`[MCP] Connecting to remote MCP tunnel server at ${this.remoteUrl}...`);
