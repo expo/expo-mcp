@@ -17,7 +17,6 @@
       },
       "dependencies": {
         "@expo/mcp-tunnel": "workspace:~",
-        "@modelcontextprotocol/sdk": "catalog:",
         "debug": "^4.4.3",
         "glob": "^11.0.3",
         "jimp-compact": "0.16.1",
@@ -43,24 +42,18 @@
       "name": "@expo/mcp-tunnel",
       "version": "0.2.1",
       "dependencies": {
+        "@modelcontextprotocol/sdk": "catalog:",
         "ws": "catalog:",
         "zod": "catalog:",
         "zod-to-json-schema": "^3.24.6",
       },
       "devDependencies": {
-        "@modelcontextprotocol/sdk": "catalog:",
         "@types/bun": "catalog:",
         "@types/node": "catalog:",
         "@types/ws": "catalog:",
         "prettier": "catalog:",
         "typescript": "catalog:",
       },
-      "peerDependencies": {
-        "@modelcontextprotocol/sdk": "^1.13.2",
-      },
-      "optionalPeers": [
-        "@modelcontextprotocol/sdk",
-      ],
     },
   },
   "catalog": {
