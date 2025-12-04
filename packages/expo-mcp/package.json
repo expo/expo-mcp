@@ -33,7 +33,6 @@
   "license": "MIT",
   "dependencies": {
     "@expo/mcp-tunnel": "workspace:~",
-    "@modelcontextprotocol/sdk": "catalog:",
     "debug": "^4.4.3",
     "glob": "^11.0.3",
     "jimp-compact": "0.16.1",
