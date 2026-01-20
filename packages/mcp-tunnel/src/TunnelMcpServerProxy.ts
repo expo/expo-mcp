@@ -4,6 +4,7 @@ import { zodToJsonSchema } from 'zod-to-json-schema';
 import { ReverseTunnelClientTransport } from './ReverseTunnelClientTransport.js';
 import {
   JSON_RPC_VERSION,
+  WS_METHOD_CLIENT_INFO,
   WS_METHOD_MCP_PROMPTS_GET,
   WS_METHOD_MCP_RESOURCES_READ,
   WS_METHOD_MCP_TOOLS_CALL,
@@ -13,6 +14,7 @@ import {
 } from './constants.js';
 import {
   type Logger,
+  type McpClientInfo,
   type McpServerProxy,
   type SerializedMcpPrompt,
   type SerializedMcpResource,
@@ -30,6 +32,12 @@ export class TunnelMcpServerProxy implements McpServerProxy {
   private registeredPrompts = new Map<string, SerializedMcpPrompt & { callback: any }>();
   private registeredResources = new Map<string, SerializedMcpResource & { callback: any }>();
   private isConnected = false;
+  private _mcpClientInfo: McpClientInfo | null = null;
+
+  /**
+   * Callback invoked when the MCP client info changes (e.g., when a new client connects).
+   */
+  onMcpClientInfoChanged?: (clientInfo: McpClientInfo | null) => void;
 
   constructor(
     remoteUrl: string,
@@ -50,6 +58,10 @@ export class TunnelMcpServerProxy implements McpServerProxy {
       this.isConnected = connected;
       if (connected) {
         this.refreshAllRegistrations();
+        // Send any cached client info when connection is established
+        if (this._mcpClientInfo) {
+          this.sendMcpClientInfoInternal(this._mcpClientInfo);
+        }
       }
     };
 
@@ -201,6 +213,34 @@ export class TunnelMcpServerProxy implements McpServerProxy {
     }
   }
 
+  /**
+   * Caches and sends the MCP client info to the tunnel server.
+   * If not connected, caches for later when connection is established.
+   */
+  async sendMcpClientInfo(clientInfo: McpClientInfo | null): Promise<void> {
+    // Always cache the client info
+    this._mcpClientInfo = clientInfo;
+
+    if (this.isConnected) {
+      await this.sendMcpClientInfoInternal(clientInfo);
+    }
+  }
+
+  /**
+   * Internal method to send client info without caching.
+   */
+  private async sendMcpClientInfoInternal(clientInfo: McpClientInfo | null): Promise<void> {
+    try {
+      await this.transport.send({
+        jsonrpc: JSON_RPC_VERSION,
+        method: WS_METHOD_CLIENT_INFO,
+        params: (clientInfo ?? {}) as Record<string, unknown>,
+      });
+    } catch (error) {
+      this.logger.error('[MCP] Failed to send client info:', error);
+    }
+  }
+
   // Getter methods for accessing registered items (useful for debugging/inspection)
   getRegisteredTools(): ReadonlyMap<string, SerializedMcpTool> {
     return new Map(
@@ -224,8 +264,27 @@ export class TunnelMcpServerProxy implements McpServerProxy {
     return this.isConnected;
   }
 
+  /**
+   * Returns the current MCP client info, or null if not yet received.
+   */
+  get mcpClientInfo(): McpClientInfo | null {
+    return this._mcpClientInfo;
+  }
+
   private async handleIncomingMessage(message: any): Promise<void> {
     try {
+      // Handle handshake response (contains mcpClientInfo)
+      if (message.result && 'mcpClientInfo' in message.result) {
+        this.updateMcpClientInfo(message.result.mcpClientInfo);
+        return;
+      }
+
+      // Handle client/info notification (no id, just method)
+      if (message.method === WS_METHOD_CLIENT_INFO && !message.id) {
+        this.updateMcpClientInfo(message.params as McpClientInfo | null);
+        return;
+      }
+
       // Only handle JSON-RPC requests (messages with id and method)
       if (!message.id || !message.method) {
         return;
@@ -315,5 +374,10 @@ export class TunnelMcpServerProxy implements McpServerProxy {
     }
 
     return await matchedResource.callback(uri);
+  }
+
+  private updateMcpClientInfo(clientInfo: McpClientInfo | null): void {
+    this._mcpClientInfo = clientInfo;
+    this.onMcpClientInfoChanged?.(clientInfo);
   }
 }
