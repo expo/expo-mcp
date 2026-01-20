@@ -1,8 +1,10 @@
-import { type McpServerProxy } from '@expo/mcp-tunnel';
+import { McpClientType, type McpServerProxy } from '@expo/mcp-tunnel';
+import path from 'path';
 import { z } from 'zod';
 import { $, within } from 'zx';
 
 import { AutomationFactory } from '../automation/AutomationFactory.js';
+import { fetchFolderFromGithubRepo } from '../develop/Github.js';
 import { createLogCollector } from '../develop/LogCollectorFactory.js';
 import { findDevServerUrlAsync, openDevtoolsAsync } from '../develop/devtools.js';
 import { isExpoRouterProject } from '../project.js';
@@ -137,6 +139,44 @@ export function addMcpTools(server: McpServerProxy, projectRoot: string) {
       const logs = await logCollector.collectAsync();
       return {
         content: [{ type: 'text', text: logs }],
+      };
+    }
+  );
+
+  // Set up skills installation tool
+
+  server.registerTool(
+    'install_expo_skill_files',
+    {
+      title: 'Install Expo Skills Files',
+      description: 'Install Expo SKILLS.md files into the current project',
+      inputSchema: {
+        projectRoot: z.string(),
+      },
+    },
+    async ({ projectRoot }) => {
+      const skillsRoot =
+        server.mcpClientInfo?.name === McpClientType.Cursor
+          ? '.cursor'
+          : server.mcpClientInfo?.name === McpClientType.VSCode
+            ? '.github'
+            : '.claude';
+
+      const dest = path.join(projectRoot, skillsRoot, 'skills');
+      await fetchFolderFromGithubRepo({
+        owner: 'expo',
+        repo: 'skills',
+        path: 'plugins',
+        outDir: dest,
+      });
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `Downloaded skills to ${dest}.`,
+          },
+        ],
       };
     }
   );
