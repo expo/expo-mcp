@@ -6,7 +6,7 @@
       "packages/*"
     ],
     "catalog": {
-      "@modelcontextprotocol/sdk": "^1.17.5",
+      "@modelcontextprotocol/sdk": "^1.26.0",
       "@types/bun": "^1.2.21",
       "@types/node": "^22.18.0",
       "@types/ws": "^8.18.1",
