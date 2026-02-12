@@ -21,16 +21,19 @@
   "author": "650 Industries, Inc.",
   "license": "MIT",
   "dependencies": {
-    "@modelcontextprotocol/sdk": "catalog:",
     "ws": "catalog:",
     "zod-to-json-schema": "^3.24.6",
     "zod": "catalog:"
   },
   "devDependencies": {
+    "@modelcontextprotocol/sdk": "catalog:",
     "@types/bun": "catalog:",
     "@types/node": "catalog:",
     "@types/ws": "catalog:",
     "prettier": "catalog:",
     "typescript": "catalog:"
+  },
+  "peerDependencies": {
+    "@modelcontextprotocol/sdk": "^1.26.0"
   }
 }
