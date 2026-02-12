@@ -11,7 +11,7 @@
     },
     "packages/expo-mcp": {
       "name": "expo-mcp",
-      "version": "0.2.3",
+      "version": "0.2.4",
       "bin": {
         "expo-mcp": "bin/expo-mcp.mjs",
       },
@@ -41,7 +41,7 @@
     },
     "packages/mcp-tunnel": {
       "name": "@expo/mcp-tunnel",
-      "version": "0.2.3",
+      "version": "0.2.4",
       "dependencies": {
         "ws": "catalog:",
         "zod": "catalog:",
