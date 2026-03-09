@@ -1,6 +1,6 @@
 import { StdioMcpServerProxy } from './StdioMcpServerProxy.js';
 import { TunnelMcpServerProxy } from './TunnelMcpServerProxy.js';
-import { type McpClientInfo, McpServerProxy } from './types.js';
+import { type McpClientInfo, type McpServerProxy } from './types.js';
 
 /**
  * A MCP server proxy that serves MCP capabilities for both `StdioMcpServerProxy` and `TunnelMcpServerProxy`.
