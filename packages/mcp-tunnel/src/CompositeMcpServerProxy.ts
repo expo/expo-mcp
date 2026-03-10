@@ -33,11 +33,6 @@ export class CompositeMcpServerProxy implements McpServerProxy {
       projectRoot,
       devServerUrl,
     });
-
-    // Forward stdio client info to the tunnel server when detected
-    this.stdioProxy.onMcpClientInfoChanged = (clientInfo) => {
-      this.tunnelProxy.sendMcpClientInfo(clientInfo);
-    };
   }
 
   registerTool: McpServerProxy['registerTool'] = (name, config, callback) => {

@@ -16,11 +16,6 @@ export class StdioMcpServerProxy implements McpServerProxy {
   private readonly transport = new StdioServerTransport();
   private _mcpClientInfo: McpClientInfo | null = null;
 
-  /**
-   * Callback invoked when the MCP client info is detected from stdio connection.
-   */
-  onMcpClientInfoChanged?: (clientInfo: McpClientInfo | null) => void;
-
   constructor({
     devServerUrl,
     mcpServerName = 'Expo MCP Server',
@@ -44,7 +39,6 @@ export class StdioMcpServerProxy implements McpServerProxy {
           name: clientVersion.name,
           version: clientVersion.version,
         };
-        this.onMcpClientInfoChanged?.(this._mcpClientInfo);
       }
     };
   }

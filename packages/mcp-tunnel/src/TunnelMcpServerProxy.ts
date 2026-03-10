@@ -34,11 +34,6 @@ export class TunnelMcpServerProxy implements McpServerProxy {
   private isConnected = false;
   private _mcpClientInfo: McpClientInfo | null = null;
 
-  /**
-   * Callback invoked when the MCP client info changes (e.g., when a new client connects).
-   */
-  onMcpClientInfoChanged?: (clientInfo: McpClientInfo | null) => void;
-
   constructor(
     remoteUrl: string,
     options: {
@@ -58,10 +53,6 @@ export class TunnelMcpServerProxy implements McpServerProxy {
       this.isConnected = connected;
       if (connected) {
         this.refreshAllRegistrations();
-        // Send any cached client info when connection is established
-        if (this._mcpClientInfo) {
-          this.sendMcpClientInfoInternal(this._mcpClientInfo);
-        }
       }
     };
 
@@ -213,34 +204,6 @@ export class TunnelMcpServerProxy implements McpServerProxy {
     }
   }
 
-  /**
-   * Caches and sends the MCP client info to the tunnel server.
-   * If not connected, caches for later when connection is established.
-   */
-  async sendMcpClientInfo(clientInfo: McpClientInfo | null): Promise<void> {
-    // Always cache the client info
-    this._mcpClientInfo = clientInfo;
-
-    if (this.isConnected) {
-      await this.sendMcpClientInfoInternal(clientInfo);
-    }
-  }
-
-  /**
-   * Internal method to send client info without caching.
-   */
-  private async sendMcpClientInfoInternal(clientInfo: McpClientInfo | null): Promise<void> {
-    try {
-      await this.transport.send({
-        jsonrpc: JSON_RPC_VERSION,
-        method: WS_METHOD_CLIENT_INFO,
-        params: (clientInfo ?? {}) as Record<string, unknown>,
-      });
-    } catch (error) {
-      this.logger.error('[MCP] Failed to send client info:', error);
-    }
-  }
-
   // Getter methods for accessing registered items (useful for debugging/inspection)
   getRegisteredTools(): ReadonlyMap<string, SerializedMcpTool> {
     return new Map(
@@ -378,6 +341,5 @@ export class TunnelMcpServerProxy implements McpServerProxy {
 
   private updateMcpClientInfo(clientInfo: McpClientInfo | null): void {
     this._mcpClientInfo = clientInfo;
-    this.onMcpClientInfoChanged?.(clientInfo);
   }
 }
