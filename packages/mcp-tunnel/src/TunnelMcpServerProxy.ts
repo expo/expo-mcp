@@ -5,6 +5,7 @@ import { ReverseTunnelClientTransport } from './ReverseTunnelClientTransport.js'
 import {
   JSON_RPC_VERSION,
   WS_METHOD_CLIENT_INFO,
+  WS_METHOD_HANDSHAKE_RESPONSE,
   WS_METHOD_MCP_PROMPTS_GET,
   WS_METHOD_MCP_RESOURCES_READ,
   WS_METHOD_MCP_TOOLS_CALL,
@@ -236,13 +237,13 @@ export class TunnelMcpServerProxy implements McpServerProxy {
 
   private async handleIncomingMessage(message: any): Promise<void> {
     try {
-      // Handle handshake response (contains mcpClientInfo)
-      if (message.result && 'mcpClientInfo' in message.result) {
-        this.updateMcpClientInfo(message.result.mcpClientInfo);
+      // Handle handshake response (server -> client)
+      if (message.method === WS_METHOD_HANDSHAKE_RESPONSE) {
+        this.updateMcpClientInfo(message.params?.mcpClientInfo as McpClientInfo | null);
         return;
       }
 
-      // Handle client/info notification (no id, just method)
+      // Handle client/info notification (server -> client, no id)
       if (message.method === WS_METHOD_CLIENT_INFO && !message.id) {
         this.updateMcpClientInfo(message.params as McpClientInfo | null);
         return;

@@ -126,29 +126,6 @@ export interface Logger {
 }
 
 /**
- * Predefined known MCP client types.
- * Reference https://github.com/apify/mcp-client-capabilities for adding more clients.
- */
-export enum McpClientType {
-  ClaudeCode = 'claude-code',
-  Cursor = 'cursor-vscode',
-  VSCode = 'Visual Studio Code',
-}
-
-/**
- * Create an McpClientType from a given client name string.
- * Returns undefined if the client name is not recognized.
- */
-export function createMcpClientType(name: string): McpClientType | undefined {
-  for (const value of Object.values(McpClientType)) {
-    if (name.includes(value)) {
-      return value;
-    }
-  }
-  return undefined;
-}
-
-/**
  * Information about the connected MCP client (e.g., Claude, VS Code, Cursor).
  */
 export interface McpClientInfo {
