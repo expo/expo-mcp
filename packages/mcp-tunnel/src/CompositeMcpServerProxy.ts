@@ -55,6 +55,11 @@ export class CompositeMcpServerProxy implements McpServerProxy {
     this.tunnelProxy.registerResource(name, uriOrTemplate, config, readCallback);
   };
 
+  sendToolListChanged(): void {
+    this.stdioProxy.sendToolListChanged();
+    this.tunnelProxy.sendToolListChanged();
+  }
+
   async start(): Promise<void> {
     await Promise.all([this.stdioProxy.start(), this.tunnelProxy.start()]);
   }
