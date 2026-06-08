@@ -53,5 +53,8 @@
     "memfs": "catalog:",
     "prettier": "catalog:",
     "typescript": "catalog:"
+  },
+  "bugs": {
+    "url": "https://github.com/expo/expo-mcp/issues"
   }
 }
