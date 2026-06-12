@@ -26,5 +26,13 @@
     "lint": "bun run --filter '*' lint",
     "test": "bun run --filter '*' test",
     "prepublishOnly": "bun run build"
+  },
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/owner/repo/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": ""
   }
 }
