@@ -26,5 +26,8 @@
     "lint": "bun run --filter '*' lint",
     "test": "bun run --filter '*' test",
     "prepublishOnly": "bun run build"
+  },
+  "bugs": {
+    "url": "https://github.com/expo/expo-mcp/issues"
   }
 }
