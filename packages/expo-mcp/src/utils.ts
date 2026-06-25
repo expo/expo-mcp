@@ -1,4 +1,3 @@
-import { glob } from 'glob';
 import fs from 'node:fs';
 
 export async function fileExistsAsync(filePath: string) {
@@ -26,10 +25,6 @@ export async function existsAsync(path: string) {
   } catch {
     return false;
   }
-}
-
-export async function findFilesAsync(pattern: string): Promise<string[]> {
-  return await glob(pattern);
 }
 
 export function resolveProjectRoot(): string {

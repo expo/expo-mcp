@@ -6,13 +6,13 @@ import {
   type ResourceTemplate,
   type ToolCallback,
 } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { type ZodOptional, type ZodRawShape, type ZodType, type ZodTypeDef } from 'zod';
+import { type ZodRawShapeCompat } from '@modelcontextprotocol/sdk/server/zod-compat.js';
+import { type ZodRawShape } from 'zod';
 
-type PromptArgsRawShape = {
-  [k: string]:
-    | ZodType<string, ZodTypeDef, string>
-    | ZodOptional<ZodType<string, ZodTypeDef, string>>;
-};
+/**
+ * @deprecated Use {@link ZodRawShapeCompat} instead. Kept for backward compatibility.
+ */
+type PromptArgsRawShape = ZodRawShapeCompat;
 
 export type {
   PromptCallback,
@@ -22,6 +22,7 @@ export type {
   ResourceMetadata,
   ResourceTemplate,
   ToolCallback,
+  ZodRawShapeCompat,
 };
 
 /**
@@ -45,7 +46,7 @@ export interface McpServerProxy {
   /**
    * Registers a prompt with a config object and callback.
    */
-  registerPrompt<Args extends PromptArgsRawShape>(
+  registerPrompt<Args extends ZodRawShapeCompat>(
     name: string,
     config: {
       title?: string;
