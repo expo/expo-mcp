@@ -38,21 +38,20 @@
     "@expo/mcp-tunnel": "workspace:~",
     "@modelcontextprotocol/sdk": "catalog:",
     "debug": "^4.4.3",
-    "glob": "^11.0.3",
     "jimp-compact": "0.16.1",
     "resolve-from": "^5.0.0",
     "ws": "catalog:",
     "xml2js": "^0.6.2",
     "zod": "catalog:",
-    "zx": "^8.8.1"
+    "zx": "^8.8.5"
   },
   "devDependencies": {
     "@types/bun": "catalog:",
-    "@types/debug": "^4.1.12",
+    "@types/debug": "^4.1.13",
     "@types/node": "catalog:",
     "@types/ws": "catalog:",
     "@types/xml2js": "^0.4.14",
-    "devtools-protocol": "^0.0.1537100",
+    "devtools-protocol": "^0.0.1648812",
     "memfs": "catalog:",
     "prettier": "catalog:",
     "typescript": "catalog:"

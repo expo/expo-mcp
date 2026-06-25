@@ -1,5 +1,4 @@
 import { z } from 'zod';
-import { zodToJsonSchema } from 'zod-to-json-schema';
 
 import { ReverseTunnelClientTransport } from './ReverseTunnelClientTransport.js';
 import {
@@ -83,10 +82,8 @@ export class TunnelMcpServerProxy implements McpServerProxy {
       name,
       title: config.title,
       description: config.description,
-      inputSchema: config.inputSchema ? zodToJsonSchema(z.object(config.inputSchema)) : undefined,
-      outputSchema: config.outputSchema
-        ? zodToJsonSchema(z.object(config.outputSchema))
-        : undefined,
+      inputSchema: config.inputSchema ? z.toJSONSchema(z.object(config.inputSchema)) : undefined,
+      outputSchema: config.outputSchema ? z.toJSONSchema(z.object(config.outputSchema)) : undefined,
       callback,
     };
 
@@ -103,7 +100,7 @@ export class TunnelMcpServerProxy implements McpServerProxy {
       name,
       title: config.title,
       description: config.description,
-      argsSchema: config.argsSchema ? zodToJsonSchema(z.object(config.argsSchema)) : undefined,
+      argsSchema: config.argsSchema ? z.toJSONSchema(z.object(config.argsSchema)) : undefined,
       callback,
     };
 

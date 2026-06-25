@@ -25,7 +25,6 @@
   "license": "MIT",
   "dependencies": {
     "ws": "catalog:",
-    "zod-to-json-schema": "^3.24.6",
     "zod": "catalog:"
   },
   "devDependencies": {
