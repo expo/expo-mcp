@@ -62,6 +62,10 @@ export class StdioMcpServerProxy implements McpServerProxy {
     }
   };
 
+  sendToolListChanged(): void {
+    this.server.sendToolListChanged();
+  }
+
   start(): Promise<void> {
     return this.server.connect(this.transport);
   }

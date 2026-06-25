@@ -67,6 +67,12 @@ export interface McpServerProxy {
   ): void;
 
   /**
+   * Notifies connected clients that the tool list has changed,
+   * prompting them to re-fetch via tools/list.
+   */
+  sendToolListChanged(): void;
+
+  /**
    * Starts the MCP server proxy.
    */
   start(): Promise<void>;

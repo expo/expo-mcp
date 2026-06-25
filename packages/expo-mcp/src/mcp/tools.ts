@@ -4,9 +4,11 @@ import { $, within } from 'zx';
 
 import { AutomationFactory } from '../automation/AutomationFactory.js';
 import { createLogCollector } from '../develop/LogCollectorFactory.js';
+import { RuntimeClient } from '../develop/RuntimeClient.js';
 import { findDevServerUrlAsync, openDevtoolsAsync } from '../develop/devtools.js';
 import { isExpoRouterProject } from '../project.js';
 import { addAutomationTools } from './tools/automation.js';
+import { discoverAndRegisterRuntimeTools } from './tools/runtime.js';
 
 export function addMcpTools(server: McpServerProxy, projectRoot: string) {
   const isRouterProject = isExpoRouterProject(projectRoot);
@@ -141,5 +143,22 @@ export function addMcpTools(server: McpServerProxy, projectRoot: string) {
     }
   );
 
-  addAutomationTools(server, projectRoot);
+  // Runtime bridge — connect to the devtools broadcast WebSocket,
+  // wait for the app to signal ready, then discover and register tools
+  const runtimeClient = new RuntimeClient(server.devServerUrl);
+  runtimeClient.connectAsync().then(async (connected) => {
+    if (!connected) {
+      console.error(
+        '[expo-mcp] Runtime bridge not available — add <ExpoMCPDevTools /> to your layout'
+      );
+      return;
+    }
+    console.error('[expo-mcp] Connected to devtools, waiting for app...');
+    await runtimeClient.waitForReady();
+    console.error('[expo-mcp] App ready — discovering tools...');
+    await discoverAndRegisterRuntimeTools(server, runtimeClient);
+  });
+
+  // Existing automation tools, now with runtime fallback for physical devices
+  addAutomationTools(server, projectRoot, runtimeClient);
 }

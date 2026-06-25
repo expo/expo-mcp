@@ -63,6 +63,10 @@ export class TunnelMcpServerProxy implements McpServerProxy {
     };
   }
 
+  sendToolListChanged(): void {
+    // Tunnel clients discover tools through their own registration mechanism
+  }
+
   async start(): Promise<void> {
     await this.transport.start();
   }
