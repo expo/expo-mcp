@@ -1,0 +1,79 @@
+name: publish
+
+on:
+  workflow_dispatch:
+    inputs:
+      package:
+        description: Which package(s) to publish
+        required: true
+        default: both
+        type: choice
+        options:
+          - both
+          - expo-mcp
+          - "@expo/mcp-tunnel"
+      tag:
+        description: npm dist-tag to publish under
+        required: true
+        default: latest
+        type: string
+      dry_run:
+        description: Build and pack only — run publish with --dry-run (nothing is published)
+        required: false
+        default: false
+        type: boolean
+
+concurrency:
+  group: publish
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  id-token: write # required for npm trusted publishing (OIDC) + provenance
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🏗 Setup repository
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: 🏗 Install Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: latest
+
+      - name: 🏗 Setup Node
+        # Node 24 bundles npm >= 11.5.1, which OIDC trusted publishing requires.
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+
+      - name: 📦 Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: 🌀 Build
+        run: bun run build
+
+      - name: 🧪 Test
+        run: bun test
+
+      - name: 📦 Pack packages
+        # bun resolves `catalog:` and `workspace:` protocols into real version
+        # ranges in the tarball; npm would otherwise leave `catalog:` strings as-is
+        # and break the published manifest. Each tarball gets its own directory so
+        # the publish globs below stay unambiguous.
+        run: |
+          mkdir -p dist-tarballs/mcp-tunnel dist-tarballs/expo-mcp
+          (cd packages/mcp-tunnel && bun pm pack --destination "$GITHUB_WORKSPACE/dist-tarballs/mcp-tunnel")
+          (cd packages/expo-mcp && bun pm pack --destination "$GITHUB_WORKSPACE/dist-tarballs/expo-mcp")
+
+      # @expo/mcp-tunnel is published first because expo-mcp depends on it.
+      - name: 🚀 Publish @expo/mcp-tunnel
+        if: ${{ inputs.package == 'both' || inputs.package == '@expo/mcp-tunnel' }}
+        run: npm publish dist-tarballs/mcp-tunnel/*.tgz --access public --tag "${{ inputs.tag }}" ${{ inputs.dry_run && '--dry-run' || '' }}
+
+      - name: 🚀 Publish expo-mcp
+        if: ${{ inputs.package == 'both' || inputs.package == 'expo-mcp' }}
+        run: npm publish dist-tarballs/expo-mcp/*.tgz --access public --tag "${{ inputs.tag }}" ${{ inputs.dry_run && '--dry-run' || '' }}
