@@ -1,6 +1,6 @@
 {
   "name": "@expo/mcp-tunnel",
-  "version": "0.2.4",
+  "version": "0.3.0",
   "description": "Expo MCP tunnel client",
   "type": "module",
   "main": "dist/index.js",
