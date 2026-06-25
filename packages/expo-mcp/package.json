@@ -19,6 +19,9 @@
     "url": "https://github.com/expo/expo-mcp.git",
     "directory": "packages/expo-mcp"
   },
+  "bugs": {
+    "url": "https://github.com/expo/expo-mcp/issues"
+  },
   "keywords": [
     "expo",
     "MCP",

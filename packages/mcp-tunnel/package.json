@@ -15,6 +15,9 @@
     "url": "https://github.com/expo/expo-mcp.git",
     "directory": "packages/mcp-tunnel"
   },
+  "bugs": {
+    "url": "https://github.com/expo/expo-mcp/issues"
+  },
   "files": [
     "dist"
   ],
