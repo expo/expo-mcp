@@ -7,6 +7,7 @@ import {
   type ToolCallback,
 } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { type ZodRawShapeCompat } from '@modelcontextprotocol/sdk/server/zod-compat.js';
+import { type ToolAnnotations } from '@modelcontextprotocol/sdk/types.js';
 import { type ZodRawShape } from 'zod';
 
 /**
@@ -39,6 +40,8 @@ export interface McpServerProxy {
       description?: string;
       inputSchema?: InputArgs;
       outputSchema?: OutputArgs;
+      annotations?: ToolAnnotations;
+      _meta?: Record<string, unknown>;
     },
     cb: ToolCallback<InputArgs>
   ): void;
@@ -91,6 +94,8 @@ export interface SerializedMcpTool {
   description?: string;
   inputSchema?: SerializedSchema;
   outputSchema?: SerializedSchema;
+  annotations?: ToolAnnotations;
+  _meta?: Record<string, unknown>;
   [key: string]: unknown;
 }
 
