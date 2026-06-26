@@ -7,6 +7,7 @@ import { createLogCollector } from '../develop/LogCollectorFactory.js';
 import { findDevServerUrlAsync, openDevtoolsAsync } from '../develop/devtools.js';
 import { isExpoRouterProject } from '../project.js';
 import { addAutomationTools } from './tools/automation.js';
+import { platformInput, projectRootInput } from './tools/schemas.js';
 
 export function addMcpTools(server: McpServerProxy, projectRoot: string) {
   const isRouterProject = isExpoRouterProject(projectRoot);
@@ -16,7 +17,11 @@ export function addMcpTools(server: McpServerProxy, projectRoot: string) {
       {
         title: 'Query the sitemap of the current expo-router project',
         description:
-          'Query the all routes of the current expo-router project. This is useful if you were using expo-router and want to know all the routes of the app',
+          'List all routes (the sitemap) of the current Expo Router project. Use this when you are working with Expo Router and need to know which routes or screens exist in the app.',
+        annotations: {
+          readOnlyHint: true,
+          openWorldHint: false,
+        },
       },
       async () => {
         const sitemap = await within(async () => {
@@ -33,10 +38,17 @@ export function addMcpTools(server: McpServerProxy, projectRoot: string) {
     'open_devtools',
     {
       title: 'Open devtools',
-      description: 'Open the React Native DevTools',
+      description:
+        'Open React Native DevTools for the running app to debug JavaScript, inspect the component tree, and view console output. Requires a running dev server (Metro) for the project.',
       inputSchema: {
-        projectRoot: z.string(),
-        platform: z.enum(['android', 'ios']).optional(),
+        projectRoot: projectRootInput,
+        platform: platformInput,
+      },
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: false,
       },
     },
     async ({ projectRoot, platform: platformParam }) => {
@@ -63,16 +75,27 @@ export function addMcpTools(server: McpServerProxy, projectRoot: string) {
     'collect_app_logs',
     {
       title: 'Collect app logs',
-      description: 'Collect logs from native device (logcat/syslog) or JavaScript console',
+      description:
+        'Collect logs over a short time window from the native device (Android logcat / iOS syslog) and/or the JavaScript console. Use this to debug runtime errors, crashes, or unexpected behavior in a running app.',
       inputSchema: {
-        projectRoot: z.string(),
+        projectRoot: projectRootInput,
         sources: z
           .array(z.enum(['native_android', 'native_ios', 'js_console']))
           .min(1)
           .default(['js_console'])
           .describe('Log sources: logcat, syslog, or console.log'),
-        appId: z.string().optional(),
-        durationMs: z.number().min(0).max(10000).default(2000),
+        appId: z
+          .string()
+          .optional()
+          .describe(
+            'Application or bundle identifier to scope native logs to. Defaults to the project app id if omitted.'
+          ),
+        durationMs: z
+          .number()
+          .min(0)
+          .max(10000)
+          .default(2000)
+          .describe('How long to collect logs for, in milliseconds.'),
         filter: z
           .string()
           .optional()
@@ -85,6 +108,10 @@ export function addMcpTools(server: McpServerProxy, projectRoot: string) {
           .describe(
             'Log level filter (e.g., error, warn, info, debug). Only logs with this level will be returned'
           ),
+      },
+      annotations: {
+        readOnlyHint: true,
+        openWorldHint: false,
       },
     },
     async ({ projectRoot, sources, appId: appIdParam, durationMs, filter, logLevel }) => {
