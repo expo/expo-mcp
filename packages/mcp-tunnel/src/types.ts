@@ -84,6 +84,11 @@ export interface McpServerProxy {
    * Gets the URL of the dev server.
    */
   get devServerUrl(): string;
+
+  /**
+   * Gets the current MCP client info (e.g., Claude, VS Code, Cursor), or null if not yet received.
+   */
+  get mcpClientInfo(): McpClientInfo | null;
 }
 
 export type SerializedSchema = object;
@@ -124,4 +129,12 @@ export interface Logger {
   error(...message: any[]): void;
   time(label: string): void;
   timeEnd(label: string): void;
+}
+
+/**
+ * Information about the connected MCP client (e.g., Claude, VS Code, Cursor).
+ */
+export interface McpClientInfo {
+  name: string;
+  version: string;
 }

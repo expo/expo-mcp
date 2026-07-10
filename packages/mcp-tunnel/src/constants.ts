@@ -39,6 +39,16 @@ export const WS_METHOD_MCP_PROMPTS_GET = 'prompts/get';
 export const WS_METHOD_MCP_RESOURCES_READ = 'resources/read';
 
 /**
+ * WebSocket method: notify about updated client info (from server -> client)
+ */
+export const WS_METHOD_CLIENT_INFO = 'client/info';
+
+/**
+ * WebSocket method: handshake response from server to client (server -> client)
+ */
+export const WS_METHOD_HANDSHAKE_RESPONSE = 'handshake_response';
+
+/**
  * Custom WebSocket close codes for MCP tunnel.
  * These codes are in the 4000-4999 range reserved for application use.
  * Standard close codes: https://www.rfc-editor.org/rfc/rfc6455.html#section-7.4.1

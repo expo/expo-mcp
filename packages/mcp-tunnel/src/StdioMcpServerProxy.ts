@@ -5,7 +5,7 @@ import {
 } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 
-import { type McpServerProxy } from './types.js';
+import { type McpClientInfo, type McpServerProxy } from './types.js';
 
 /**
  * A MCP server proxy that serves MCP capabilities as the stdio server transport.
@@ -14,6 +14,7 @@ export class StdioMcpServerProxy implements McpServerProxy {
   private readonly _devServerUrl: string;
   private readonly server;
   private readonly transport = new StdioServerTransport();
+  private _mcpClientInfo: McpClientInfo | null = null;
 
   constructor({
     devServerUrl,
@@ -29,6 +30,17 @@ export class StdioMcpServerProxy implements McpServerProxy {
       name: mcpServerName,
       version: mcpServerVersion,
     });
+
+    // Capture client info when the MCP client initializes
+    this.server.server.oninitialized = () => {
+      const clientVersion = this.server.server.getClientVersion();
+      if (clientVersion) {
+        this._mcpClientInfo = {
+          name: clientVersion.name,
+          version: clientVersion.version,
+        };
+      }
+    };
   }
 
   registerTool: McpServerProxy['registerTool'] = (name, config, callback) => {
@@ -72,5 +84,9 @@ export class StdioMcpServerProxy implements McpServerProxy {
 
   get devServerUrl(): string {
     return this._devServerUrl;
+  }
+
+  get mcpClientInfo(): McpClientInfo | null {
+    return this._mcpClientInfo;
   }
 }

@@ -1,6 +1,6 @@
 import { StdioMcpServerProxy } from './StdioMcpServerProxy.js';
 import { TunnelMcpServerProxy } from './TunnelMcpServerProxy.js';
-import { McpServerProxy } from './types.js';
+import { type McpClientInfo, type McpServerProxy } from './types.js';
 
 /**
  * A MCP server proxy that serves MCP capabilities for both `StdioMcpServerProxy` and `TunnelMcpServerProxy`.
@@ -68,5 +68,10 @@ export class CompositeMcpServerProxy implements McpServerProxy {
     // We try to get the devServerUrl from the transport.
     // TODO(kudo,20251127): Remove this once mcp-tunnel@~0.1.0 is no longer supported.
     return this._devServerUrl ?? this.tunnelProxy.devServerUrl;
+  }
+
+  get mcpClientInfo(): McpClientInfo | null {
+    // Prefer stdio client info (local IDE connection) over tunnel client info
+    return this.stdioProxy.mcpClientInfo ?? this.tunnelProxy.mcpClientInfo;
   }
 }

@@ -3,6 +3,8 @@ import { z } from 'zod';
 import { ReverseTunnelClientTransport } from './ReverseTunnelClientTransport.js';
 import {
   JSON_RPC_VERSION,
+  WS_METHOD_CLIENT_INFO,
+  WS_METHOD_HANDSHAKE_RESPONSE,
   WS_METHOD_MCP_PROMPTS_GET,
   WS_METHOD_MCP_RESOURCES_READ,
   WS_METHOD_MCP_TOOLS_CALL,
@@ -12,6 +14,7 @@ import {
 } from './constants.js';
 import {
   type Logger,
+  type McpClientInfo,
   type McpServerProxy,
   type SerializedMcpPrompt,
   type SerializedMcpResource,
@@ -29,6 +32,7 @@ export class TunnelMcpServerProxy implements McpServerProxy {
   private registeredPrompts = new Map<string, SerializedMcpPrompt & { callback: any }>();
   private registeredResources = new Map<string, SerializedMcpResource & { callback: any }>();
   private isConnected = false;
+  private _mcpClientInfo: McpClientInfo | null = null;
 
   constructor(
     remoteUrl: string,
@@ -223,8 +227,27 @@ export class TunnelMcpServerProxy implements McpServerProxy {
     return this.isConnected;
   }
 
+  /**
+   * Returns the current MCP client info, or null if not yet received.
+   */
+  get mcpClientInfo(): McpClientInfo | null {
+    return this._mcpClientInfo;
+  }
+
   private async handleIncomingMessage(message: any): Promise<void> {
     try {
+      // Handle handshake response (server -> client)
+      if (message.method === WS_METHOD_HANDSHAKE_RESPONSE) {
+        this.updateMcpClientInfo(message.params?.mcpClientInfo as McpClientInfo | null);
+        return;
+      }
+
+      // Handle client/info notification (server -> client, no id)
+      if (message.method === WS_METHOD_CLIENT_INFO && !message.id) {
+        this.updateMcpClientInfo(message.params as McpClientInfo | null);
+        return;
+      }
+
       // Only handle JSON-RPC requests (messages with id and method)
       if (!message.id || !message.method) {
         return;
@@ -314,5 +337,9 @@ export class TunnelMcpServerProxy implements McpServerProxy {
     }
 
     return await matchedResource.callback(uri);
+  }
+
+  private updateMcpClientInfo(clientInfo: McpClientInfo | null): void {
+    this._mcpClientInfo = clientInfo;
   }
 }
