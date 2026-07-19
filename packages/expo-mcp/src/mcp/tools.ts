@@ -6,15 +6,13 @@ import { AutomationFactory } from '../automation/AutomationFactory.js';
 import { createLogCollector } from '../develop/LogCollectorFactory.js';
 import { findDevServerUrlAsync, openDevtoolsAsync } from '../develop/devtools.js';
 import { isExpoRouterProject } from '../project.js';
-import { createFeedbackToolRegistrar } from './feedback.js';
 import { addAutomationTools } from './tools/automation.js';
 import { platformInput, projectRootInput } from './tools/schemas.js';
 
 export function addMcpTools(server: McpServerProxy, projectRoot: string) {
-  const registerTool = createFeedbackToolRegistrar(server);
   const isRouterProject = isExpoRouterProject(projectRoot);
   if (isRouterProject) {
-    registerTool(
+    server.registerTool(
       'expo_router_sitemap',
       {
         title: 'Query the sitemap of the current expo-router project',
@@ -36,7 +34,7 @@ export function addMcpTools(server: McpServerProxy, projectRoot: string) {
     );
   }
 
-  registerTool(
+  server.registerTool(
     'open_devtools',
     {
       title: 'Open devtools',
@@ -73,7 +71,7 @@ export function addMcpTools(server: McpServerProxy, projectRoot: string) {
     }
   );
 
-  registerTool(
+  server.registerTool(
     'collect_app_logs',
     {
       title: 'Collect app logs',

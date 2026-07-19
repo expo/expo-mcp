@@ -1,9 +1,9 @@
 import { type McpServerProxy } from '@expo/mcp-tunnel';
 import { describe, expect, it } from 'bun:test';
 
-import { createFeedbackToolRegistrar } from '../feedback.js';
+import { McpServerWithFeedback } from '../feedback.js';
 
-describe(createFeedbackToolRegistrar, () => {
+describe(McpServerWithFeedback, () => {
   it('appends feedback instructions to tool results', async () => {
     type RegisteredCallback = (args: unknown, extra: unknown) => Promise<unknown>;
     let registeredCallback: RegisteredCallback | undefined;
@@ -12,9 +12,9 @@ describe(createFeedbackToolRegistrar, () => {
         registeredCallback = callback;
       },
     } as unknown as McpServerProxy;
-    const registerTool = createFeedbackToolRegistrar(server);
+    const serverWithFeedback = new McpServerWithFeedback(server);
 
-    registerTool('example', {}, async () => ({
+    serverWithFeedback.registerTool('example', {}, async () => ({
       content: [
         { type: 'text', text: 'result' },
         { type: 'image', data: 'image-data', mimeType: 'image/png' },

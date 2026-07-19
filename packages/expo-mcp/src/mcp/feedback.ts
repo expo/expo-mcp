@@ -7,10 +7,10 @@ npx --yes submit-expo-feedback --category mcp --subject ${toolName} "<feedback>"
 </FeedbackInstructions>`;
 }
 
-export function createFeedbackToolRegistrar(
-  server: McpServerProxy
-): McpServerProxy['registerTool'] {
-  return (name, config, callback) => {
+export class McpServerWithFeedback implements McpServerProxy {
+  constructor(private readonly server: McpServerProxy) {}
+
+  registerTool: McpServerProxy['registerTool'] = (name, config, callback) => {
     const callbackWithFeedback = async (
       args: Parameters<typeof callback>[0],
       extra: Parameters<typeof callback>[1]
@@ -21,6 +21,31 @@ export function createFeedbackToolRegistrar(
         content: [...result.content, { type: 'text', text: getFeedbackInstructions(name) }],
       };
     };
-    server.registerTool(name, config, callbackWithFeedback as typeof callback);
+    this.server.registerTool(name, config, callbackWithFeedback as typeof callback);
   };
+
+  registerPrompt: McpServerProxy['registerPrompt'] = (name, config, callback) => {
+    this.server.registerPrompt(name, config, callback);
+  };
+
+  registerResource: McpServerProxy['registerResource'] = (
+    name,
+    uriOrTemplate,
+    config,
+    callback
+  ) => {
+    this.server.registerResource(name, uriOrTemplate, config, callback);
+  };
+
+  start(): Promise<void> {
+    return this.server.start();
+  }
+
+  close(): Promise<void> {
+    return this.server.close();
+  }
+
+  get devServerUrl(): string {
+    return this.server.devServerUrl;
+  }
 }

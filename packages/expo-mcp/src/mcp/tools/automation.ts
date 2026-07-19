@@ -3,7 +3,6 @@ import fs from 'node:fs';
 import { z } from 'zod';
 import { tmpfile } from 'zx';
 
-import { createFeedbackToolRegistrar } from '../feedback.js';
 import { platformInput, projectRootInput } from './schemas.js';
 import type { IAutomation } from '../../automation/Automation.types.js';
 import { AutomationFactory } from '../../automation/AutomationFactory.js';
@@ -28,8 +27,7 @@ async function getAutomationContext(
 }
 
 export function addAutomationTools(server: McpServerProxy, projectRoot: string) {
-  const registerTool = createFeedbackToolRegistrar(server);
-  registerTool(
+  server.registerTool(
     'automation_tap',
     {
       title: 'Tap on device',
@@ -75,7 +73,7 @@ export function addAutomationTools(server: McpServerProxy, projectRoot: string) 
     }
   );
 
-  registerTool(
+  server.registerTool(
     'automation_take_screenshot',
     {
       title: 'Take screenshot of the app',
@@ -115,7 +113,7 @@ export function addAutomationTools(server: McpServerProxy, projectRoot: string) 
     }
   );
 
-  registerTool(
+  server.registerTool(
     'automation_find_view',
     {
       title: 'Find view properties',
