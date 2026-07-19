@@ -1,5 +1,6 @@
 import { type McpServerProxy } from '@expo/mcp-tunnel';
 
+import { McpServerWithFeedback } from './mcp/feedback.js';
 import { addMcpPrompts } from './mcp/prompts.js';
 import { addMcpTools } from './mcp/tools.js';
 
@@ -9,6 +10,7 @@ import { addMcpTools } from './mcp/tools.js';
  * @param projectRoot - The project root directory.
  */
 export function addMcpCapabilities(server: McpServerProxy, projectRoot: string) {
-  addMcpTools(server, projectRoot);
-  addMcpPrompts(server, projectRoot);
+  const serverWithFeedback = new McpServerWithFeedback(server);
+  addMcpTools(serverWithFeedback, projectRoot);
+  addMcpPrompts(serverWithFeedback, projectRoot);
 }
