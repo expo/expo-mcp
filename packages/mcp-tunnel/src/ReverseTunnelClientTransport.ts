@@ -6,6 +6,12 @@ import { type JSONRPCMessage } from '@modelcontextprotocol/sdk/types.js';
 import WebSocket from 'ws';
 
 import {
+  type TunnelClientHandshake,
+  type TunnelClientHandshakeOptions,
+  handshakeDevServerUrl,
+  resolveTunnelClientHandshake,
+} from './TunnelHandshake.js';
+import {
   JSON_RPC_VERSION,
   NON_RECONNECTABLE_CLOSE_CODES,
   WS_METHOD_HANDSHAKE,
@@ -29,19 +35,14 @@ export class ReverseTunnelClientTransport implements Transport {
   private reconnectTimer?: NodeJS.Timeout;
   private isConnected = false;
   private isServerAborted = false;
-  private readonly handshakeData: {
-    projectRoot: string;
-    devServerUrl: string;
-  };
+  private readonly handshakeData: TunnelClientHandshake;
 
   onConnectionChange?: (connected: boolean) => void;
   onServerAbort?: (reason: string, closeCode?: number) => void;
 
   constructor(
     remoteUrl: string,
-    options: {
-      projectRoot: string;
-      devServerUrl: string;
+    options: TunnelClientHandshakeOptions & {
       reconnectInterval?: number;
       wsHeaders?: Record<string, string>;
       logger?: Logger;
@@ -55,10 +56,7 @@ export class ReverseTunnelClientTransport implements Transport {
     this.remoteUrl = remoteUrl.endsWith('/tunnel') ? remoteUrl : `${remoteUrl}/tunnel`;
     this.reconnectInterval = reconnectInterval;
 
-    this.handshakeData = {
-      projectRoot: options.projectRoot,
-      devServerUrl: options.devServerUrl,
-    };
+    this.handshakeData = resolveTunnelClientHandshake(options);
   }
 
   async start(): Promise<void> {
@@ -66,7 +64,7 @@ export class ReverseTunnelClientTransport implements Transport {
   }
 
   get devServerUrl(): string {
-    return this.handshakeData.devServerUrl;
+    return handshakeDevServerUrl(this.handshakeData);
   }
 
   private async connect(): Promise<void> {

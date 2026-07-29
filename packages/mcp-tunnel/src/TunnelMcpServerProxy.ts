@@ -2,6 +2,11 @@ import { z } from 'zod';
 
 import { ReverseTunnelClientTransport } from './ReverseTunnelClientTransport.js';
 import {
+  type TunnelClientHandshakeOptions,
+  handshakeDevServerUrl,
+  resolveTunnelClientHandshake,
+} from './TunnelHandshake.js';
+import {
   JSON_RPC_VERSION,
   WS_METHOD_MCP_PROMPTS_GET,
   WS_METHOD_MCP_RESOURCES_READ,
@@ -32,16 +37,14 @@ export class TunnelMcpServerProxy implements McpServerProxy {
 
   constructor(
     remoteUrl: string,
-    options: {
-      projectRoot: string;
-      devServerUrl: string;
+    options: TunnelClientHandshakeOptions & {
       reconnectInterval?: number;
       wsHeaders?: Record<string, string>;
       logger?: Logger;
     }
   ) {
     this.logger = options.logger ?? console;
-    this._devServerUrl = options.devServerUrl;
+    this._devServerUrl = handshakeDevServerUrl(resolveTunnelClientHandshake(options));
     this.transport = new ReverseTunnelClientTransport(remoteUrl, options);
 
     // Listen for connection events to refresh registrations

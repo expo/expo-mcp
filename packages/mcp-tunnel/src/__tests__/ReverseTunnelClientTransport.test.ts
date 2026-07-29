@@ -24,7 +24,7 @@ const mockLogger = {
 };
 
 describe(ReverseTunnelClientTransport, () => {
-  it('should send handshake with correct data when connected', async () => {
+  it('should send a dev-server handshake for legacy projectRoot/devServerUrl options', async () => {
     const projectRoot = '/app';
     const devServerUrl = 'http://localhost:8081';
     const transport = new ReverseTunnelClientTransport('ws://localhost:8080', {
@@ -40,8 +40,27 @@ describe(ReverseTunnelClientTransport, () => {
     expect(sendSpy).toHaveBeenCalledWith({
       jsonrpc: JSON_RPC_VERSION,
       method: WS_METHOD_HANDSHAKE,
-      params: { projectRoot, devServerUrl },
+      params: { kind: 'dev-server', projectRoot, devServerUrl },
     });
+  });
+
+  it('should send an orbit handshake when given an orbit descriptor', async () => {
+    const transport = new ReverseTunnelClientTransport('ws://localhost:8080', {
+      handshake: { kind: 'orbit', machineId: 'machine-123', orbitVersion: '0.1.0' },
+      logger: mockLogger,
+    });
+
+    const sendSpy = spyOn(transport, 'send').mockResolvedValue(undefined);
+
+    await transport.start();
+
+    expect(sendSpy).toHaveBeenCalledWith({
+      jsonrpc: JSON_RPC_VERSION,
+      method: WS_METHOD_HANDSHAKE,
+      params: { kind: 'orbit', machineId: 'machine-123', orbitVersion: '0.1.0' },
+    });
+    // Orbit clients are not associated with a dev server.
+    expect(transport.devServerUrl).toBe('');
   });
 
   it('should reconnect by default on disconnection', async () => {
