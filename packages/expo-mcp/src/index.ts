@@ -1,6 +1,7 @@
 import { type McpServerProxy } from '@expo/mcp-tunnel';
 
 import { addMcpPrompts } from './mcp/prompts.js';
+import { addMcpResources } from './mcp/resources.js';
 import { addMcpTools } from './mcp/tools.js';
 
 /**
@@ -11,4 +12,5 @@ import { addMcpTools } from './mcp/tools.js';
 export function addMcpCapabilities(server: McpServerProxy, projectRoot: string) {
   addMcpTools(server, projectRoot);
   addMcpPrompts(server, projectRoot);
+  addMcpResources(server, projectRoot);
 }
