@@ -8,7 +8,6 @@ import {
 } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { type ZodRawShapeCompat } from '@modelcontextprotocol/sdk/server/zod-compat.js';
 import { type ToolAnnotations } from '@modelcontextprotocol/sdk/types.js';
-import { type ZodRawShape } from 'zod';
 
 /**
  * @deprecated Use {@link ZodRawShapeCompat} instead. Kept for backward compatibility.
@@ -33,7 +32,7 @@ export interface McpServerProxy {
   /**
    * Registers a tool with a config object and callback.
    */
-  registerTool<InputArgs extends ZodRawShape, OutputArgs extends ZodRawShape>(
+  registerTool<InputArgs extends ZodRawShapeCompat, OutputArgs extends ZodRawShapeCompat>(
     name: string,
     config: {
       title?: string;

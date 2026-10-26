@@ -1,4 +1,5 @@
-import { z } from 'zod';
+import { objectFromShape } from '@modelcontextprotocol/sdk/server/zod-compat.js';
+import { toJsonSchemaCompat } from '@modelcontextprotocol/sdk/server/zod-json-schema-compat.js';
 
 import { ReverseTunnelClientTransport } from './ReverseTunnelClientTransport.js';
 import {
@@ -82,8 +83,12 @@ export class TunnelMcpServerProxy implements McpServerProxy {
       name,
       title: config.title,
       description: config.description,
-      inputSchema: config.inputSchema ? z.toJSONSchema(z.object(config.inputSchema)) : undefined,
-      outputSchema: config.outputSchema ? z.toJSONSchema(z.object(config.outputSchema)) : undefined,
+      inputSchema: config.inputSchema
+        ? toJsonSchemaCompat(objectFromShape(config.inputSchema), { pipeStrategy: 'output' })
+        : undefined,
+      outputSchema: config.outputSchema
+        ? toJsonSchemaCompat(objectFromShape(config.outputSchema), { pipeStrategy: 'output' })
+        : undefined,
       annotations: config.annotations,
       _meta: config._meta,
       callback,
@@ -102,7 +107,9 @@ export class TunnelMcpServerProxy implements McpServerProxy {
       name,
       title: config.title,
       description: config.description,
-      argsSchema: config.argsSchema ? z.toJSONSchema(z.object(config.argsSchema)) : undefined,
+      argsSchema: config.argsSchema
+        ? toJsonSchemaCompat(objectFromShape(config.argsSchema), { pipeStrategy: 'output' })
+        : undefined,
       callback,
     };
 
