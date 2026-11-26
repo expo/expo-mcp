@@ -82,7 +82,9 @@ export class TunnelMcpServerProxy implements McpServerProxy {
       name,
       title: config.title,
       description: config.description,
-      inputSchema: config.inputSchema ? z.toJSONSchema(z.object(config.inputSchema)) : undefined,
+      inputSchema: config.inputSchema
+        ? z.toJSONSchema(z.object(config.inputSchema), { io: 'input' })
+        : undefined,
       outputSchema: config.outputSchema ? z.toJSONSchema(z.object(config.outputSchema)) : undefined,
       annotations: config.annotations,
       _meta: config._meta,
@@ -102,7 +104,9 @@ export class TunnelMcpServerProxy implements McpServerProxy {
       name,
       title: config.title,
       description: config.description,
-      argsSchema: config.argsSchema ? z.toJSONSchema(z.object(config.argsSchema)) : undefined,
+      argsSchema: config.argsSchema
+        ? z.toJSONSchema(z.object(config.argsSchema), { io: 'input' })
+        : undefined,
       callback,
     };
 
