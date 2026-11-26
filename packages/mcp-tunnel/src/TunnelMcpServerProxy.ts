@@ -18,6 +18,38 @@ import {
   type SerializedMcpTool,
 } from './types.js';
 
+class InvalidParamsError extends Error {}
+
+const withParsedToolInput =
+  (name: string, schema: z.ZodObject, callback: (...args: any[]) => any) =>
+  async (args: unknown) => {
+    const parsed = await schema.safeParseAsync(args);
+    if (!parsed.success) {
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `Input validation error: Invalid arguments for tool ${name}: ${z.prettifyError(parsed.error)}`,
+          },
+        ],
+        isError: true,
+      };
+    }
+    return callback(parsed.data);
+  };
+
+const withParsedPromptArgs =
+  (name: string, schema: z.ZodObject, callback: (...args: any[]) => any) =>
+  async (args: unknown) => {
+    const parsed = await schema.safeParseAsync(args);
+    if (!parsed.success) {
+      throw new InvalidParamsError(
+        `Invalid arguments for prompt ${name}: ${z.prettifyError(parsed.error)}`
+      );
+    }
+    return callback(parsed.data);
+  };
+
 /**
  * A MCP server proxy that connects to a WebSocket tunnel server and allows the remote MCP server to serve MCP capabilities from local.
  */
@@ -78,15 +110,16 @@ export class TunnelMcpServerProxy implements McpServerProxy {
   }
 
   registerTool: McpServerProxy['registerTool'] = (name, config, callback) => {
+    const inputObject = config.inputSchema ? z.object(config.inputSchema) : undefined;
     const serializedTool: SerializedMcpTool & { callback: any } = {
       name,
       title: config.title,
       description: config.description,
-      inputSchema: config.inputSchema ? z.toJSONSchema(z.object(config.inputSchema)) : undefined,
+      inputSchema: inputObject ? z.toJSONSchema(inputObject, { io: 'input' }) : undefined,
       outputSchema: config.outputSchema ? z.toJSONSchema(z.object(config.outputSchema)) : undefined,
       annotations: config.annotations,
       _meta: config._meta,
-      callback,
+      callback: inputObject ? withParsedToolInput(name, inputObject, callback) : callback,
     };
 
     this.registeredTools.set(name, serializedTool);
@@ -98,12 +131,13 @@ export class TunnelMcpServerProxy implements McpServerProxy {
   };
 
   registerPrompt: McpServerProxy['registerPrompt'] = (name, config, callback) => {
+    const argsObject = config.argsSchema ? z.object(config.argsSchema) : undefined;
     const serializedPrompt: SerializedMcpPrompt & { callback: any } = {
       name,
       title: config.title,
       description: config.description,
-      argsSchema: config.argsSchema ? z.toJSONSchema(z.object(config.argsSchema)) : undefined,
-      callback,
+      argsSchema: argsObject ? z.toJSONSchema(argsObject, { io: 'input' }) : undefined,
+      callback: argsObject ? withParsedPromptArgs(name, argsObject, callback) : callback,
     };
 
     this.registeredPrompts.set(name, serializedPrompt);
@@ -252,7 +286,7 @@ export class TunnelMcpServerProxy implements McpServerProxy {
         }
       } catch (err) {
         error = {
-          code: -32603,
+          code: err instanceof InvalidParamsError ? -32602 : -32603,
           message: err instanceof Error ? err.message : 'Internal error',
         };
       }
